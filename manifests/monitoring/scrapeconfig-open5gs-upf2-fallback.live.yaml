@@ -1,0 +1,47 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"monitoring.coreos.com/v1alpha1","kind":"ScrapeConfig","metadata":{"annotations":{},"labels":{"release":"kps"},"name":"open5gs-upf2-fallback","namespace":"monitoring"},"spec":{"fallbackScrapeProtocol":"PrometheusText0.0.4","honorLabels":true,"kubernetesSDConfigs":[{"namespaces":{"names":["open5gs"]},"role":"Endpoints"}],"relabelings":[{"action":"keep","regex":"open5gs-upf2-metrics","sourceLabels":["__meta_kubernetes_service_name"]},{"action":"keep","regex":"metrics","sourceLabels":["__meta_kubernetes_endpoint_port_name"]},{"action":"replace","replacement":"/metrics","targetLabel":"__metrics_path__"}],"scrapeInterval":"5s"}}
+  creationTimestamp: "2026-03-12T00:07:56Z"
+  generation: 2
+  labels:
+    release: kps
+  name: open5gs-upf2-fallback
+  namespace: monitoring
+  resourceVersion: "38045"
+  uid: 0410d7b4-7e68-4bb1-bbc9-cabde14d0600
+spec:
+  fallbackScrapeProtocol: PrometheusText0.0.4
+  honorLabels: true
+  kubernetesSDConfigs:
+  - namespaces:
+      names:
+      - open5gs
+    role: Endpoints
+  relabelings:
+  - action: keep
+    regex: open5gs-upf2-metrics
+    sourceLabels:
+    - __meta_kubernetes_service_name
+  - action: keep
+    regex: metrics
+    sourceLabels:
+    - __meta_kubernetes_endpoint_port_name
+  - action: replace
+    replacement: /metrics
+    targetLabel: __metrics_path__
+  - action: replace
+    sourceLabels:
+    - __meta_kubernetes_namespace
+    targetLabel: namespace
+  - action: replace
+    sourceLabels:
+    - __meta_kubernetes_pod_name
+    targetLabel: pod
+  - action: replace
+    sourceLabels:
+    - __meta_kubernetes_service_name
+    targetLabel: service
+  scrapeInterval: 5s

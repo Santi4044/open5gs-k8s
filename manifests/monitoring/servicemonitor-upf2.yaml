@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: open5gs-upf2
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  namespaceSelector:
+    matchNames:
+      - open5gs
+  selector:
+    matchLabels:
+      app: open5gs
+      name: upf2
+      nf: upf
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 5s

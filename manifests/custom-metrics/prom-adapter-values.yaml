@@ -1,0 +1,15 @@
+prometheus:
+  url: http://kps-kube-prometheus-stack-prometheus.monitoring.svc
+  port: 9090
+
+rules:
+  default: false
+  external:
+    - seriesQuery: 'fivegs_ep_n3_gtp_indatapktn3upf{namespace!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+      name:
+        as: "upf1_n3_in_pps"
+      metricsQuery: 'sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{<<.LabelMatchers>>}[30s])) or vector(0)'

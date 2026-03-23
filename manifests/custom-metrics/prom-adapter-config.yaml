@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prom-adapter-custom-config
+  namespace: custom-metrics
+data:
+  config.yaml: |
+    rules:
+      external:
+        - seriesQuery: 'fivegs_ep_n3_gtp_indatapktn3upf{namespace="open5gs"}'
+          name:
+            as: "upf1_n3_in_pps"
+          # IMPORTANT: cluster-scoped external metric (NOT namespaced)
+          namespaced: false
+          metricsQuery: 'sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace="open5gs"}[30s])) or vector(0)'
