@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y \
     iproute2 \
     iputils-ping \
     python3 \
+    iperf3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

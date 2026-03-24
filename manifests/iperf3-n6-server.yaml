@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iperf3-n6-server
+  namespace: open5gs
+  labels:
+    app: iperf3-n6-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iperf3-n6-server
+  template:
+    metadata:
+      labels:
+        app: iperf3-n6-server
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "n6network", "interface": "n6", "ips": [ "10.10.6.100/24" ] }
+          ]'
+    spec:
+      containers:
+      - name: iperf3
+        image: networkstatic/iperf3:latest
+        command: ["iperf3", "-s", "-p", "5201"]
+        ports:
+        - containerPort: 5201
+          name: iperf
+          protocol: UDP
+        - containerPort: 5201
+          name: iperf-tcp
+          protocol: TCP
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      restartPolicy: Always
