@@ -1,0 +1,4 @@
+,match_vs_ideal,scale_events,type
+HPA,6.9,3,Reactive
+ARIMA,0.0,2,Predictive
+DQN,100.0,4,RL-based
