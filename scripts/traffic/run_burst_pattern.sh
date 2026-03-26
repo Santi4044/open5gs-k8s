@@ -16,18 +16,20 @@ run_phase() {
     echo "[burst] Idle phase — sleeping ${dur}s"
     sleep "$dur"
   else
-    # Retry up to 3 times if iperf3 server is busy
     for attempt in 1 2 3; do
-      kubectl exec -n "$NS" "$UE_POD" -c ue -- \
+      timeout $((dur + 30)) kubectl exec -n "$NS" "$UE_POD" -c ue -- \
         iperf3 -c "$SERVER" -p "$PORT" -u -b "$bitrate" -l 1200 -t "$dur" \
         --connect-timeout 5000 2>&1 | tail -5
-      if [ ${PIPESTATUS[0]} -eq 0 ]; then
+      rc=${PIPESTATUS[0]}
+      if [ "$rc" -eq 0 ]; then
         break
       fi
-      echo "[burst] iperf3 busy, retrying in 10s (attempt $attempt/3)..."
-      sleep 10
+      echo "[burst] iperf3 failed (rc=$rc), retrying in 15s (attempt $attempt/3)..."
+      # Kill any leftover iperf3 in UE pod
+      kubectl exec -n "$NS" "$UE_POD" -c ue -- pkill iperf3 2>/dev/null
+      sleep 15
     done
-    sleep 10  # longer gap to let server fully release
+    sleep 15  # gap between phases
   fi
 }
 
