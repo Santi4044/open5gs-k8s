@@ -1,0 +1,479 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "5g-upf-autoscaling",
+    "title": "5G UPF Autoscaling Dashboard",
+    "description": "Real-time monitoring of 5G UPF autoscaling: PPS metrics, replica count, HPA status, and scaling events",
+    "tags": ["5g", "open5gs", "autoscaling", "upf"],
+    "timezone": "utc",
+    "refresh": "5s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "UPF N3 Packets Per Second (PPS)",
+        "description": "Rate of GTP-U packets received on N3 interface",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace=\"open5gs\",service=\"open5gs-upf1-metrics\"}[30s]))",
+            "legendFormat": "UPF1 PPS",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "blue" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 15,
+              "gradientMode": "scheme",
+              "showPoints": "auto",
+              "pointSize": 5,
+              "spanNulls": false,
+              "axisCenteredZero": false,
+              "thresholdsStyle": { "mode": "dashed" }
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 3000 },
+                { "color": "red", "value": 4000 }
+              ]
+            },
+            "unit": "pps"
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "single" }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Current Status",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace=\"open5gs\",service=\"open5gs-upf1-metrics\"}[30s]))",
+            "legendFormat": "PPS",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 3000 },
+                { "color": "red", "value": 4000 }
+              ]
+            },
+            "unit": "pps"
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "textMode": "auto",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 3,
+        "title": "HPA Threshold",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "vector(4000)",
+            "legendFormat": "Threshold",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "red" },
+            "unit": "pps"
+          }
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "textMode": "value",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 4,
+        "title": "UPF1 Replicas",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 16, "y": 4 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "kube_deployment_status_replicas_ready{namespace=\"open5gs\",deployment=\"open5gs-upf1\"}",
+            "legendFormat": "Ready",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 2 },
+                { "color": "orange", "value": 3 },
+                { "color": "red", "value": 4 }
+              ]
+            },
+            "min": 0,
+            "max": 5
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "background",
+          "textMode": "auto",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Max Replicas",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 20, "y": 4 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"open5gs\",horizontalpodautoscaler=\"open5gs-upf1-pps\"}",
+            "legendFormat": "Max",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "purple" }
+          }
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "textMode": "value",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 6,
+        "title": "UPF1 Replica Count Over Time",
+        "description": "Ready vs desired replicas over time",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 8 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "kube_deployment_status_replicas_ready{namespace=\"open5gs\",deployment=\"open5gs-upf1\"}",
+            "legendFormat": "Ready Replicas",
+            "refId": "A"
+          },
+          {
+            "expr": "kube_deployment_spec_replicas{namespace=\"open5gs\",deployment=\"open5gs-upf1\"}",
+            "legendFormat": "Desired Replicas",
+            "refId": "B"
+          },
+          {
+            "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"open5gs\",horizontalpodautoscaler=\"open5gs-upf1-pps\"}",
+            "legendFormat": "HPA Desired",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 0,
+              "stacking": { "mode": "none" },
+              "lineInterpolation": "stepAfter",
+              "showPoints": "auto",
+              "pointSize": 5
+            },
+            "min": 0,
+            "max": 6,
+            "decimals": 0
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Ready Replicas" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Desired Replicas" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "HPA Desired" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 7,
+        "title": "PPS vs HPA Threshold (Scaling Trigger View)",
+        "description": "Shows when PPS crosses the 4000 threshold that triggers scaling",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 8 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace=\"open5gs\",service=\"open5gs-upf1-metrics\"}[30s]))",
+            "legendFormat": "Actual PPS",
+            "refId": "A"
+          },
+          {
+            "expr": "vector(4000)",
+            "legendFormat": "HPA Threshold (4000)",
+            "refId": "B"
+          },
+          {
+            "expr": "vector(8000)",
+            "legendFormat": "2-Replica Threshold",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 0,
+              "showPoints": "never"
+            },
+            "unit": "pps"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Actual PPS" },
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } },
+                { "id": "custom.fillOpacity", "value": 10 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "HPA Threshold (4000)" },
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+                { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "2-Replica Threshold" },
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } },
+                { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 8,
+        "title": "UPF Pod CPU Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 15 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"open5gs\",pod=~\"open5gs-upf1.*\",container!=\"\",container!=\"POD\"}[1m])) by (pod)",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 1,
+              "fillOpacity": 20,
+              "gradientMode": "scheme"
+            },
+            "unit": "percentunit"
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 9,
+        "title": "UPF Pod Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 15 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(container_memory_working_set_bytes{namespace=\"open5gs\",pod=~\"open5gs-upf1.*\",container!=\"\",container!=\"POD\"}) by (pod)",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 1,
+              "fillOpacity": 20,
+              "gradientMode": "scheme"
+            },
+            "unit": "bytes"
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 10,
+        "title": "GTP-U Total Packets (Counter)",
+        "description": "Raw counter value — confirms metrics are being scraped",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 22 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "sum(fivegs_ep_n3_gtp_indatapktn3upf{namespace=\"open5gs\",service=\"open5gs-upf1-metrics\"}) by (pod)",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 1,
+              "fillOpacity": 5
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 11,
+        "title": "5G Core Pod Status",
+        "description": "All Open5GS pods in the namespace",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 22 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "kube_pod_status_ready{namespace=\"open5gs\",condition=\"true\"}",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 1,
+              "fillOpacity": 50,
+              "lineInterpolation": "stepAfter"
+            },
+            "min": 0,
+            "max": 1.2,
+            "decimals": 0,
+            "mappings": [
+              { "type": "value", "options": { "0": { "text": "Not Ready" }, "1": { "text": "Ready" } } }
+            ]
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right" },
+          "tooltip": { "mode": "multi" }
+        }
+      },
+      {
+        "id": 12,
+        "title": "HPA Scaling Events",
+        "description": "Changes in replica count indicate scaling events",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 24, "x": 0, "y": 29 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "changes(kube_deployment_status_replicas{namespace=\"open5gs\",deployment=\"open5gs-upf1\"}[5m])",
+            "legendFormat": "Replica Changes (5m window)",
+            "refId": "A"
+          },
+          {
+            "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"open5gs\",horizontalpodautoscaler=\"open5gs-upf1-pps\"}",
+            "legendFormat": "HPA Current Replicas",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 0,
+              "lineInterpolation": "stepAfter",
+              "showPoints": "auto",
+              "pointSize": 5
+            },
+            "decimals": 0
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Replica Changes (5m window)" },
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+                { "id": "custom.fillOpacity", "value": 30 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "HPA Current Replicas" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        }
+      }
+    ],
+    "schemaVersion": 39,
+    "version": 1
+  },
+  "overwrite": true
+}
