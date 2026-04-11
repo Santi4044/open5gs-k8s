@@ -17,7 +17,7 @@ spec:
           name: upf1_n3_in_pps
         target:
           type: Value
-          value: 4k
+          value: "1500"
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0
