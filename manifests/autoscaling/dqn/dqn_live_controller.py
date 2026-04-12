@@ -46,7 +46,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-# ── Constants ───────────────────────────────────────────────────────
+#Constants
 PROM_URL = os.environ.get(
     "PROM_URL",
     "http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
@@ -65,7 +65,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-# ── DQN Model & Agent (self-contained, mirrors dqn_predictor.py) ──
+#DQN Model & Agent (self-contained, mirrors dqn_predictor.py)
 
 class UPFScalingEnv:
     """Simulated UPF scaling environment for offline training."""
@@ -215,7 +215,7 @@ class DQNAgent:
             print(f"  [model] Loaded weights from {path}")
 
 
-# ── Training ────────────────────────────────────────────────────────
+#Training
 
 def load_training_data(csv_path):
     """Load watcher CSV and extract PPS series."""
@@ -266,9 +266,9 @@ def train_on_files(agent, csv_files, episodes_per_file, threshold, max_replicas)
         if (ep + 1) % 100 == 0:
             avg = np.mean(rewards_history[-100:])
             print(f"    Episode {ep+1}/{total_episodes} | "
-                  f"Avg reward (last 100): {avg:.1f} | ε: {agent.epsilon:.3f}")
+                  f"Avg reward (last 100): {avg:.1f} | Epsilon: {agent.epsilon:.3f}")
 
-    print(f"\n  Training complete! Final ε: {agent.epsilon:.4f}")
+    print(f"\n  Training complete! Final Epsilon: {agent.epsilon:.4f}")
     print(f"  Avg reward (last 100): {np.mean(rewards_history[-100:]):.1f}")
     return rewards_history
 
@@ -334,19 +334,19 @@ def scale_deployment(desired):
         return False
 
 
-# ── Main ────────────────────────────────────────────────────────────
+#Main
 
-ACTION_NAMES = {0: "scale_down", 1: "hold", 2: "scale_up"}
+ACTION_NAMES = {0: "scale down", 1: "hold", 2: "scale up"}
 
 
 def main():
     parser = argparse.ArgumentParser(description="DQN Live Autoscaling Controller")
-    parser.add_argument("--threshold", type=int, default=4000,
-                        help="PPS per replica (default: 4000)")
+    parser.add_argument("--threshold", type=int, default=1500,
+                        help="PPS per replica (default: 1,500)")
     parser.add_argument("--interval", type=int, default=5,
                         help="Control loop interval in seconds (default: 5)")
-    parser.add_argument("--cooldown", type=int, default=20,
-                        help="Cooldown seconds between scale actions (default: 20)")
+    parser.add_argument("--cooldown", type=int, default=30,
+                        help="Cooldown seconds between scale actions (default: 30)")
     parser.add_argument("--max-replicas", type=int, default=5)
     parser.add_argument("--train-dir", type=str,
                         default="manifests/autoscaling/dqn/training_data",
@@ -373,17 +373,17 @@ def main():
     if args.load_model:
         # Skip training, load pre-trained weights
         print(f"""
-╔══════════════════════════════════════════════════╗
-║        DQN Live Autoscaling Controller           ║
-╠══════════════════════════════════════════════════╣
-║  Mode:       {mode:<35s} ║
-║  Model:      {os.path.basename(args.load_model):<35s} ║
-║  Backend:    {'PyTorch' if HAS_TORCH else 'Q-Table':<35s} ║
-║  Threshold:  {args.threshold:<35d} ║
-║  Interval:   {args.interval}s{'':<33s} ║
-║  Cooldown:   {args.cooldown}s{'':<33s} ║
-║  Log:        {os.path.basename(args.log):<35s} ║
-╚══════════════════════════════════════════════════╝
+===========================================================
+DQN Live Autoscaling Controller
+
+Mode:       {mode:<35s}
+Model:      {os.path.basename(args.load_model):<35s}
+Backend:    {'PyTorch' if HAS_TORCH else 'Q-Table':<35s}
+Threshold:  {args.threshold:<35d}
+Interval:   {args.interval}s{'':<33s}
+Cooldown:   {args.cooldown}s{'':<33s}
+Log:        {os.path.basename(args.log):<35s}
+===========================================================
         """)
         agent.load(args.load_model)
     else:
@@ -394,18 +394,18 @@ def main():
             sys.exit(1)
 
         print(f"""
-╔══════════════════════════════════════════════════╗
-║        DQN Live Autoscaling Controller           ║
-╠══════════════════════════════════════════════════╣
-║  Mode:       {mode:<35s} ║
-║  Backend:    {'PyTorch' if HAS_TORCH else 'Q-Table':<35s} ║
-║  Train files:{len(train_files):<35d} ║
-║  Episodes:   {str(args.episodes) + " per file":<35s} ║
-║  Threshold:  {args.threshold:<35d} ║
-║  Interval:   {args.interval}s{'':<33s} ║
-║  Cooldown:   {args.cooldown}s{'':<33s} ║
-║  Log:        {os.path.basename(args.log):<35s} ║
-╚══════════════════════════════════════════════════╝
+============================================================
+DQN Live Autoscaling Controller
+
+Mode:       {mode:<35s}
+Backend:    {'PyTorch' if HAS_TORCH else 'Q-Table':<35s}
+Train files:{len(train_files):<35d}
+Episodes:   {str(args.episodes) + " per file":<35s}
+Threshold:  {args.threshold:<35d}
+Interval:   {args.interval}s{'':<33s}
+Cooldown:   {args.cooldown}s{'':<33s}
+Log:        {os.path.basename(args.log):<35s}
+============================================================
         """)
 
         print("[train] Loading training data...")
@@ -456,6 +456,7 @@ def main():
 
     try:
         while running:
+            loop_start = time.time()
             now = datetime.now(timezone.utc)
             ts = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
@@ -499,13 +500,13 @@ def main():
 
             # 7. Print status
             step += 1
-            status = f"{'>>>' if action_name != 'hold' else '   '}"
             print(f"  [{step:>4d}] {ts} | PPS: {pps:>8.1f} | "
-                  f"Replicas: {current_replicas}→{desired} | "
-                  f"{action_name:<10s} {status}")
+                  f"Replicas: {current_replicas} -> {desired} | "
+                  f"{action_name:<10s}")
 
             prev_pps = pps
-            time.sleep(args.interval)
+            elapsed = time.time() - loop_start
+            time.sleep(max(0, args.interval - elapsed))
 
     finally:
         log_file.close()

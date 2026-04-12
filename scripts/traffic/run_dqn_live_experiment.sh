@@ -19,8 +19,8 @@ echo "[setup] iperf3 server started"
 echo "[setup] Starting DQN live controller (pre-trained model)..."
 python manifests/autoscaling/dqn/dqn_live_controller.py \
   --interval 5 \
-  --threshold 4000 \
-  --cooldown 20 \
+  --threshold 1500 \
+  --cooldown 30 \
   --load-model manifests/autoscaling/dqn/dqn_model.pth \
   --log manifests/autoscaling/dqn/results/dqn_live_experiment.csv &
 CTRL_PID=$!
@@ -29,24 +29,6 @@ echo "[setup] Controller PID: $CTRL_PID"
 # Wait for controller to initialize
 echo "[setup] Waiting for controller to initialize (~10s)..."
 sleep 10
-
-# Verify controller is still running
-if ! kill -0 $CTRL_PID 2>/dev/null; then
-  echo "[error] Controller died! Check logs."
-  exit 1
-fi
-echo "[setup] Controller is live. Starting traffic phases..."
-
-# Start persistent iperf3 server (restarts after each client)
-start_iperf_server() {
-  pkill -f "iperf3 -s" 2>/dev/null; sleep 1
-  while true; do
-    iperf3 -s -p 5201 --one-off 2>/dev/null
-  done &
-  IPERF_PID=$!
-  echo "[setup] iperf3 persistent server started (PID: $IPERF_PID)"
-}
-start_iperf_server
 
 # Run burst traffic pattern
 run_phase() {
@@ -62,11 +44,11 @@ run_phase() {
   fi
 }
 
-run_phase "1-LOW"    20M  30
-run_phase "2-HIGH"   50M  30
-run_phase "3-LOW"    20M  30
-run_phase "4-SPIKE"  60M  30
-run_phase "5-IDLE"   0    30
+run_phase "1-IDLE"   0    30
+run_phase "2-LOW"    10M  60
+run_phase "3-IDLE"   0    30
+run_phase "4-HIGH"   40M  120
+run_phase "5-IDLE"   0    120
 
 # Let controller observe cooldown
 echo ""

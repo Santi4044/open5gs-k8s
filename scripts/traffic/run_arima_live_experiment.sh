@@ -25,23 +25,25 @@ python manifests/autoscaling/arima/arima_live_controller.py \
   --min-window 10 \
   --log "$LOG_CSV" &
 CTRL_PID=$!
-echo "[exp] Controller PID: $CTRL_PID"
+echo "Controller PID: $CTRL_PID"
 
 #Wait for controller to initialise
-echo "[exp] Waiting 15s for controller to initialise..."
-sleep 15
+echo "Waiting 3s for controller to initialise..."
 
-#Traffic phases (must match HPA experiment exactly)
+sleep 3
+
+#Traffic phases
 run_phase() {
   local label="$1" bitrate="$2" dur="$3"
-  echo "[exp] Phase: $label | bitrate=$bitrate | dur=${dur}s" | tee -a "$TRAFFIC_LOG"
+  echo "Phase: $label | bitrate=$bitrate | dur=${dur}s" | tee -a "$TRAFFIC_LOG"
+  sleep 1  # sync delay so phase label prints before traffic starts
   if [ "$bitrate" = "0" ]; then
     sleep "$dur"
   else
     kubectl exec -n "$NS" "$UE_POD" -c ue -- sh -lc "
       ip route add 10.10.6.0/24 dev uesimtun0 2>/dev/null || true
-      iperf3 -u -c 10.10.6.100 -p 5201 -b ${bitrate} -l 1200 -t ${dur} --connect-timeout 5000
-    " 2>&1 | tee -a "$TRAFFIC_LOG"
+      iperf3 -u -c 10.10.6.100 -p 5201 -b ${bitrate} -l 1200 -t ${dur} --connect-timeout 5000 > /dev/null 2>&1
+    " > /dev/null 2>&1
   fi
 }
 

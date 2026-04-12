@@ -37,5 +37,5 @@ echo "[traffic] $(date -Iseconds) UE_POD=$UE_POD -> SERVER=${SERVER_IP}:${SERVER
 kubectl exec -n "$NAMESPACE_OPEN5GS" "$UE_POD" -c ue -- sh -lc "
 ip route add ${DN_SUBNET} dev ${UE_TUN_IF} 2>/dev/null || true
 ip route get ${SERVER_IP} || true
-iperf3 -u -c ${SERVER_IP} -p ${SERVER_PORT} -b ${BITRATE} -l ${PKT_LEN} -t ${DURATION}
+iperf3 -u -c ${SERVER_IP} -p ${SERVER_PORT} -b ${BITRATE} -l ${PKT_LEN} -t ${DURATION} --connect-timeout 5000 || true
 "

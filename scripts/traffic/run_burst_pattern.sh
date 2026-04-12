@@ -25,7 +25,6 @@ run_phase() {
         break
       fi
       echo "[burst] iperf3 failed (rc=$rc), retrying in 15s (attempt $attempt/3)..."
-      # Kill any leftover iperf3 in UE pod
       kubectl exec -n "$NS" "$UE_POD" -c ue -- pkill iperf3 2>/dev/null
       sleep 15
     done
@@ -38,11 +37,13 @@ echo "  Burst Traffic Pattern — Start"
 echo "  $(date -u +%FT%T%z)"
 echo "========================================="
 
-run_phase "1-LOW"   20M  30
-run_phase "2-HIGH"  50M  30
-run_phase "3-LOW"   20M  30
-run_phase "4-HIGH"  50M  30
-run_phase "5-IDLE"  0    30
+# ── CHANGE THESE PHASES PER RUN ──────────────────────────
+run_phase "1-IDLE"  0    30
+run_phase "2-LOW"   10M  60
+run_phase "3-MED"   20M  60
+run_phase "4-HIGH"  40M  60
+run_phase "5-IDLE"  0    120
+# ─────────────────────────────────────────────────────────
 
 echo ""
 echo "========================================="

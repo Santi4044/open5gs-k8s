@@ -26,10 +26,13 @@ from collections import deque
 from datetime import datetime, timezone
 
 import numpy as np
+import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+warnings.simplefilter("ignore", ConvergenceWarning)
 
 warnings.filterwarnings("ignore")
 
-# ── Prometheus query ────────────────────────────────────────────────
+#Prometheus query
 PROM_URL = os.environ.get(
     "PROM_URL",
     "http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
@@ -141,8 +144,8 @@ def arima_forecast(history, order=(2, 1, 2), horizon=3):
 
 def main():
     parser = argparse.ArgumentParser(description="ARIMA Live Controller")
-    parser.add_argument("--threshold", type=int, default=4000,
-                        help="PPS per replica (default: 4000)")
+    parser.add_argument("--threshold", type=int, default=1500,
+                        help="PPS per replica (default: 1,500)")
     parser.add_argument("--interval", type=int, default=5,
                         help="Control loop interval in seconds (default: 5)")
     parser.add_argument("--horizon", type=int, default=3,
@@ -178,18 +181,17 @@ def main():
 
     mode = "DRY-RUN" if args.dry_run else "LIVE"
     print(f"""
-╔══════════════════════════════════════════════════╗
-║       ARIMA Live Autoscaling Controller          ║
-╠══════════════════════════════════════════════════╣
-║  Mode:       {mode:<35s} ║
-║  ARIMA:      {str(order):<35s} ║
-║  Horizon:    {args.horizon:<35d} ║
-║  Threshold:  {args.threshold:<35d} ║
-║  Interval:   {args.interval}s{'':<33s} ║
-║  Window:     {args.window:<35d} ║
-║  Cooldown:   {args.cooldown}s{'':<33s} ║
-║  Log:        {os.path.basename(args.log):<35s} ║
-╚══════════════════════════════════════════════════╝
+=======================================================
+ARIMA Live Autoscaling Controller
+Mode:       {mode:<35s}
+ARIMA:      {str(order):<35s}
+Horizon:    {args.horizon:<35d}
+Threshold:  {args.threshold:<35d}
+Interval:   {args.interval}s{'':<33s}
+Window:     {args.window:<35d}
+Cooldown:   {args.cooldown}s{'':<33s}
+Log:        {os.path.basename(args.log):<35s}
+=======================================================
     """)
 
     if not args.dry_run:
@@ -204,6 +206,7 @@ def main():
     step = 0
     try:
         while running:
+            loop_start = time.time()
             now = datetime.now(timezone.utc)
             ts = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
@@ -227,7 +230,7 @@ def main():
             time_since_last = time.time() - last_scale_time
 
             if desired != current_replicas and time_since_last >= args.cooldown:
-                action = "scale_up" if desired > current_replicas else "scale_down"
+                action = "scale up" if desired > current_replicas else "scale down"
                 if not args.dry_run:
                     scaled = scale_deployment(desired)
                     if scaled:
@@ -242,14 +245,13 @@ def main():
 
             # 6. Print status
             step += 1
-            status = f"{'>>>' if action != 'hold' else '   '}"
-            window_status = f"[{len(history)}/{args.window}]"
             print(f"  [{step:>4d}] {ts} | PPS: {pps:>8.1f} | "
                   f"Forecast: {forecast_pps:>8.1f} | "
-                  f"Replicas: {current_replicas}→{desired} | "
-                  f"{action:<10s} {status} {window_status}")
+                  f"Replicas: {current_replicas} -> {desired} | "
+                  f"{action:<10s}")
 
-            time.sleep(args.interval)
+            elapsed = time.time() - loop_start
+            time.sleep(max(0, args.interval - elapsed))
 
     finally:
         log_file.close()
