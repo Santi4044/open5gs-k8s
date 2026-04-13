@@ -28,6 +28,11 @@ df["desired_replicas"] = pd.to_numeric(df["desired_replicas"], errors="coerce").
 THRESHOLD = 1500
 df["ideal_replicas"] = np.clip(np.ceil(df["pps_actual"] / THRESHOLD), 1, 5).astype(int)
 
+# ── Detect scale events from replica changes ───────────────────────────────────
+df["replica_change"] = df["current_replicas"].diff()
+scale_up   = df[df["replica_change"] > 0]
+scale_down = df[df["replica_change"] < 0]
+
 # ── Figure ─────────────────────────────────────────────────────────────────────
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
 fig.suptitle("ARIMA Autoscaling – Live Experiment", fontsize=14, fontweight="bold")
@@ -38,6 +43,13 @@ ax1.plot(df["elapsed"], df["pps_forecast"], color="#9C27B0", linewidth=1.5,
          linestyle="--", label="ARIMA Forecast PPS")
 ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label="Threshold (1500 PPS)")
 ax1.fill_between(df["elapsed"], df["pps_actual"], alpha=0.1, color="#2196F3")
+
+# ── Scale event markers ────────────────────────────────────────────────────────
+ax1.scatter(scale_up["elapsed"],   scale_up["pps_actual"],
+            color="green", zorder=5, s=80, marker="^", label="Scale Up")
+ax1.scatter(scale_down["elapsed"], scale_down["pps_actual"],
+            color="red",   zorder=5, s=80, marker="v", label="Scale Down")
+
 ax1.set_ylabel("Packets per Second (PPS)", fontsize=11)
 ax1.legend(loc="upper right", fontsize=9)
 ax1.set_ylim(bottom=0)
