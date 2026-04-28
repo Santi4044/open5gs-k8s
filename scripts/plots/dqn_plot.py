@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
 """
 DQN Autoscaling Live Experiment — Plot
-Mirrors arima_plot.py style for fair visual comparison.
+Mirrors arima_plot.py and hpa_plot.py style for fair visual comparison.
 """
 
-import os
 import pandas as pd
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+import glob
 
-# ── Load CSV ──────────────────────────────────────────────────────────
-RESULT_FILE = "manifests/autoscaling/dqn/results/dqn_live_experiment.csv"
-df = pd.read_csv(RESULT_FILE, parse_dates=["ts_iso"])
+# ── Auto-find latest DQN experiment folder ────────────────────────────────────
+folders = sorted(glob.glob("results/*-dqn-experiment"))
+if not folders:
+    raise FileNotFoundError("No DQN experiment results found in results/")
+latest = folders[-1]
+print(f"Using: {latest}")
+
+df = pd.read_csv(f"{latest}/dqn_live.csv", parse_dates=["ts_iso"])
 df = df.sort_values("ts_iso").reset_index(drop=True)
 
-# ── Compute elapsed seconds ──────────────────────────────────────────
+# ── Compute elapsed seconds ───────────────────────────────────────────────────
 t0 = df["ts_iso"].iloc[0]
 df["elapsed"] = (df["ts_iso"] - t0).dt.total_seconds()
 
-# Phase markers
+# ── Phase markers ─────────────────────────────────────────────────────────────
 phases = [
     (0,   "IDLE\n(30s)"),
     (35,  "LOW\n(10M/60s)"),
@@ -31,7 +35,7 @@ phases = [
 
 THRESHOLD = 1500
 
-# ── Ideal replicas ───────────────────────────────────────────────────
+# ── Ideal replicas ────────────────────────────────────────────────────────────
 def ideal_replicas(pps, threshold=THRESHOLD, max_r=5):
     if pps <= 0:
         return 1
@@ -39,42 +43,39 @@ def ideal_replicas(pps, threshold=THRESHOLD, max_r=5):
 
 df["ideal"] = df["pps_actual"].apply(ideal_replicas)
 
-# ── Plot ─────────────────────────────────────────────────────────────
+# ── Detect scale events ───────────────────────────────────────────────────────
+scale_up   = df[(df["dqn_action"] == "scale up")   & (df["scale_executed"].astype(str).str.strip() == "True")]
+scale_down = df[(df["dqn_action"] == "scale down") & (df["scale_executed"].astype(str).str.strip() == "True")]
+
+# ── Figure ────────────────────────────────────────────────────────────────────
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
 fig.suptitle("DQN Autoscaling – Live Experiment", fontsize=14, fontweight="bold")
 
-# ── Top: PPS ─────────────────────────────────────────────────────────
+# ── Top plot: PPS + threshold ─────────────────────────────────────────────────
 ax1.plot(df["elapsed"], df["pps_actual"], color="#2196F3", linewidth=2, label="Actual PPS")
-ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label=f"Threshold ({THRESHOLD} PPS)")
+ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label="Threshold (1500 PPS)")
 ax1.fill_between(df["elapsed"], df["pps_actual"], alpha=0.1, color="#2196F3")
 
-# Mark scale events
-scale_up   = df[(df["dqn_action"] == "scale up")   & (df["scale_executed"].astype(str).str.strip() == "True")]
-scale_down = df[(df["dqn_action"] == "scale down") & (df["scale_executed"].astype(str).str.strip() == "True")]
 ax1.scatter(scale_up["elapsed"],   scale_up["pps_actual"],
-            color="green", zorder=5, s=80, marker="^", label="Scale Up")
+            color="#4CAF50", zorder=5, s=80, marker="^", label="Scale Up")
 ax1.scatter(scale_down["elapsed"], scale_down["pps_actual"],
-            color="red",   zorder=5, s=80, marker="v", label="Scale Down")
+            color="#F44336",   zorder=5, s=80, marker="v", label="Scale Down")
 
-# Phase lines
+ax1.set_ylabel("Packets per Second (PPS)", fontsize=11)
+ax1.legend(loc="upper right", fontsize=9)
+ax1.set_ylim(bottom=0)
+ax1.grid(True, alpha=0.3)
+
+# ── Phase labels ──────────────────────────────────────────────────────────────
 for x, label in phases:
     ax1.axvline(x, color="gray", linewidth=0.8, linestyle=":")
     ax1.text(x + 2, ax1.get_ylim()[1] * 0.92, label, fontsize=7.5, color="gray")
 
-ax1.set_ylabel("Packets per Second (PPS)", fontsize=11)
-ax1.set_ylim(bottom=0)
-ax1.legend(loc="upper right", fontsize=9)
-ax1.grid(True, alpha=0.3)
-
-# ── Bottom: Replicas ─────────────────────────────────────────────────
+# ── Bottom plot: DQN Replicas + Ideal Replicas ───────────────────────────────
 ax2.step(df["elapsed"], df["current_replicas"], where="post",
          color="#4CAF50", linewidth=2, label="DQN Replicas")
 ax2.step(df["elapsed"], df["ideal"], where="post",
          color="#FF9800", linewidth=1.5, linestyle="--", label="Ideal Replicas")
-
-for x, _ in phases:
-    ax2.axvline(x, color="gray", linewidth=0.8, linestyle=":")
-
 ax2.set_ylabel("Replicas", fontsize=11)
 ax2.set_xlabel("Time (seconds)", fontsize=11)
 ax2.set_ylim(0, 6)
@@ -82,8 +83,11 @@ ax2.yaxis.set_major_locator(ticker.MultipleLocator(1))
 ax2.legend(loc="upper right", fontsize=9)
 ax2.grid(True, alpha=0.3)
 
-plt.tight_layout()
+# ── Phase lines on bottom plot too ────────────────────────────────────────────
+for x, _ in phases:
+    ax2.axvline(x, color="gray", linewidth=0.8, linestyle=":")
 
-out_path = "manifests/autoscaling/dqn/results/dqn_live_plot.png"
-plt.savefig(out_path, dpi=150, bbox_inches="tight")
-print(f"Saved: {out_path}")
+plt.tight_layout()
+plt.savefig(f"{latest}/dqn_plot.png", dpi=150, bbox_inches="tight")
+print(f"Saved: {latest}/dqn_plot.png")
+plt.show()
