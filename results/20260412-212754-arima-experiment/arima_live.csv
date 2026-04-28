@@ -1,6 +1,0 @@
-ts_iso,pps_actual,pps_forecast,current_replicas,desired_replicas,action,scale_executed
-2026-04-12T20:27:55+00:00,0.16,0.16,1,1,hold,False
-2026-04-12T20:28:00+00:00,0.04,0.04,1,1,hold,False
-2026-04-12T20:28:05+00:00,0.04,0.04,1,1,hold,False
-2026-04-12T20:28:10+00:00,0.04,0.04,1,1,hold,False
-2026-04-12T20:28:15+00:00,0.0,0.0,1,1,hold,False
