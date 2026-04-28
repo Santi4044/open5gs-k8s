@@ -8,17 +8,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import glob
 
-# ── Auto-find latest DQN experiment folder ────────────────────────────────────
-folders = sorted(glob.glob("results/*-dqn-experiment"))
-if not folders:
-    raise FileNotFoundError("No DQN experiment results found in results/")
-latest = folders[-1]
-print(f"Using: {latest}")
+# ── Load CSV ──────────────────────────────────────────────────────────────────
+RESULT_FILE = "manifests/autoscaling/dqn/results/dqn_live_experiment.csv"
+OUT_FILE    = "manifests/autoscaling/dqn/results/dqn_plot.png"
 
-df = pd.read_csv(f"{latest}/dqn_live.csv", parse_dates=["ts_iso"])
+df = pd.read_csv(RESULT_FILE, parse_dates=["ts_iso"])
 df = df.sort_values("ts_iso").reset_index(drop=True)
+print(f"Using: {RESULT_FILE}")
 
 # ── Compute elapsed seconds ───────────────────────────────────────────────────
 t0 = df["ts_iso"].iloc[0]
@@ -57,9 +54,9 @@ ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label="Th
 ax1.fill_between(df["elapsed"], df["pps_actual"], alpha=0.1, color="#2196F3")
 
 ax1.scatter(scale_up["elapsed"],   scale_up["pps_actual"],
-            color="#4CAF50", zorder=5, s=80, marker="^", label="Scale Up")
+            color="green", zorder=5, s=80, marker="^", label="Scale Up")
 ax1.scatter(scale_down["elapsed"], scale_down["pps_actual"],
-            color="#F44336",   zorder=5, s=80, marker="v", label="Scale Down")
+            color="red",   zorder=5, s=80, marker="v", label="Scale Down")
 
 ax1.set_ylabel("Packets per Second (PPS)", fontsize=11)
 ax1.legend(loc="upper right", fontsize=9)
@@ -88,6 +85,6 @@ for x, _ in phases:
     ax2.axvline(x, color="gray", linewidth=0.8, linestyle=":")
 
 plt.tight_layout()
-plt.savefig(f"{latest}/dqn_plot.png", dpi=150, bbox_inches="tight")
-print(f"Saved: {latest}/dqn_plot.png")
+plt.savefig(OUT_FILE, dpi=150, bbox_inches="tight")
+print(f"Saved: {OUT_FILE}")
 plt.show()
