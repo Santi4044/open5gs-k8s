@@ -4,9 +4,7 @@ Estimated Response Time using M/M/c Queuing Model
 - X-axis: Time (seconds)
 - Y-axis: Estimated Response Time (ms)
 - Lines: one per pod count (1 to max_replicas used by algorithm)
-  Each line shows: "if c pods were running, what would response time be?"
-  → 1 pod = highest (overloaded during peak)
-  → more pods = lower and smoother
+- Phase annotations (vertical lines + labels) matching existing plot scripts
 - Separate plot for HPA, ARIMA, DQN
 """
 
@@ -21,6 +19,31 @@ import os
 MU        = 1500    # service rate per replica (PPS threshold)
 MAX_RT_MS = 50.0    # cap for saturated/overloaded state (ms)
 BASE_RT   = (1 / MU) * 1000  # ~0.667ms minimum service time
+
+# ── Phase definitions (matching existing plot scripts) ────────────────────────
+HPA_PHASES = [
+    (0,   "IDLE\n(30s)"),
+    (30,  "LOW\n(10M/60s)"),
+    (90,  "IDLE\n(30s)"),
+    (120, "HIGH\n(40M/120s)"),
+    (240, "IDLE\n(120s)"),
+]
+
+ARIMA_PHASES = [
+    (0 + 15,   "IDLE\n(30s)"),
+    (30 + 15,  "LOW\n(10M/60s)"),
+    (90 + 15,  "IDLE\n(30s)"),
+    (120 + 15, "HIGH\n(40M/120s)"),
+    (240 + 15, "IDLE\n(120s)"),
+]
+
+DQN_PHASES = [
+    (0,   "IDLE\n(30s)"),
+    (35,  "LOW\n(10M/60s)"),
+    (110, "IDLE\n(30s)"),
+    (140, "HIGH\n(40M/120s)"),
+    (275, "IDLE\n(120s)"),
+]
 
 # ── Erlang-C ──────────────────────────────────────────────────────────────────
 def erlang_c(c, lam, mu):
@@ -38,7 +61,7 @@ def response_time_ms(lam, c, mu=MU):
         return BASE_RT
     rho = lam / (c * mu)
     if rho >= 1.0:
-        return MAX_RT_MS   # system saturated
+        return MAX_RT_MS
     ec = erlang_c(c, lam, mu)
     w_s = (1.0 / mu) + ec / (c * mu - lam)
     return min(w_s * 1000, MAX_RT_MS)
@@ -86,7 +109,7 @@ REPLICA_COLORS = ["#F44336", "#FF9800", "#FFC107", "#8BC34A", "#4CAF50"]
 #                  1 pod       2 pods     3 pods      4 pods     5 pods
 
 # ── Plot ──────────────────────────────────────────────────────────────────────
-def plot_response_time(df, title, out_path, pps_col="pps_actual"):
+def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
     t0 = df["ts_iso"].iloc[0]
     df = df.copy()
     df["elapsed"] = (df["ts_iso"] - t0).dt.total_seconds()
@@ -97,13 +120,19 @@ def plot_response_time(df, title, out_path, pps_col="pps_actual"):
     fig, ax = plt.subplots(figsize=(12, 5))
     fig.suptitle(f"Estimated Response Time — {title}", fontsize=14, fontweight="bold")
 
-    # One line per pod count — shows what RT would be if c pods handled all traffic
+    # One line per pod count
     for c in range(1, max_replicas + 1):
         rt = df[pps_col].apply(lambda lam: response_time_ms(lam, c))
         ax.plot(df["elapsed"], rt,
                 color=REPLICA_COLORS[c - 1],
                 linewidth=2.0,
                 label=f"{c} pod{'s' if c > 1 else ''}")
+
+    # ── Phase annotations ─────────────────────────────────────────────────────
+    for x, label in phases:
+        ax.axvline(x, color="gray", linewidth=0.8, linestyle=":")
+        ax.text(x + 2, (MAX_RT_MS + 5) * 0.92, label,
+                fontsize=7.5, color="gray", va="top")
 
     ax.set_xlabel("Time (seconds)", fontsize=11)
     ax.set_ylabel("Estimated Response Time (ms)", fontsize=11)
@@ -112,9 +141,8 @@ def plot_response_time(df, title, out_path, pps_col="pps_actual"):
     ax.legend(loc="upper right", fontsize=10, title="Number of Pods")
     ax.grid(True, alpha=0.3)
 
-    # Annotate saturation threshold
-    ax.axhline(y=MAX_RT_MS, color="red", linewidth=0.8, linestyle=":", alpha=0.5,
-               label="Saturated (overloaded)")
+    # Saturation line
+    ax.axhline(y=MAX_RT_MS, color="red", linewidth=0.8, linestyle=":", alpha=0.5)
 
     plt.tight_layout()
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
@@ -129,8 +157,8 @@ if __name__ == "__main__":
     arima_df, arima_dir = load_arima()
     dqn_df,   dqn_dir   = load_dqn()
 
-    plot_response_time(hpa_df,   "HPA",   f"{hpa_dir}/hpa_response_time.png")
-    plot_response_time(arima_df, "ARIMA", f"{arima_dir}/arima_response_time.png")
-    plot_response_time(dqn_df,   "DQN",   f"{dqn_dir}/dqn_response_time.png")
+    plot_response_time(hpa_df,   "HPA",   f"{hpa_dir}/hpa_response_time.png",   HPA_PHASES)
+    plot_response_time(arima_df, "ARIMA", f"{arima_dir}/arima_response_time.png", ARIMA_PHASES)
+    plot_response_time(dqn_df,   "DQN",   f"{dqn_dir}/dqn_response_time.png",   DQN_PHASES)
 
     print("\nDone! All 3 response time graphs generated.")
