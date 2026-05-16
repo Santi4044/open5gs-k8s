@@ -15,12 +15,12 @@ import glob
 import math
 import os
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 MU        = 1500    # service rate per replica (PPS threshold)
 MAX_RT_MS = 50.0    # cap for saturated/overloaded state (ms)
 BASE_RT   = (1 / MU) * 1000  # ~0.667ms minimum service time
 
-# ── Phase definitions (matching existing plot scripts) ────────────────────────
+# Traffic phase labels
 HPA_PHASES = [
     (0,   "IDLE\n(30s)"),
     (30,  "LOW\n(10M/60s)"),
@@ -45,7 +45,7 @@ DQN_PHASES = [
     (275, "IDLE\n(120s)"),
 ]
 
-# ── Erlang-C ──────────────────────────────────────────────────────────────────
+# Erlang-C formula to calculate queueing delay
 def erlang_c(c, lam, mu):
     rho = lam / (c * mu)
     if rho >= 1.0:
@@ -66,7 +66,7 @@ def response_time_ms(lam, c, mu=MU):
     w_s = (1.0 / mu) + ec / (c * mu - lam)
     return min(w_s * 1000, MAX_RT_MS)
 
-# ── Helper ────────────────────────────────────────────────────────────────────
+# Find the latest result folder
 def find_latest_folder(pattern, filename):
     folders = sorted(glob.glob(pattern), reverse=True)
     for f in folders:
@@ -74,7 +74,7 @@ def find_latest_folder(pattern, filename):
             return f
     raise FileNotFoundError(f"No folder matching '{pattern}' contains '{filename}'")
 
-# ── Loaders ───────────────────────────────────────────────────────────────────
+# Load result files
 def load_hpa():
     f = find_latest_folder("results/*-hpa-experiment", "watch.csv")
     print(f"  [HPA] folder: {f}")
@@ -104,11 +104,10 @@ def load_dqn():
     df["current_replicas"] = df["current_replicas"].clip(lower=1)
     return df.sort_values("ts_iso").reset_index(drop=True), "manifests/autoscaling/dqn/results"
 
-# ── Colors per pod count ──────────────────────────────────────────────────────
+# Colors for each pod count (1 pod, 2 pods, 3 pods, 4 pods, 5 pods)
 REPLICA_COLORS = ["#F44336", "#FF9800", "#FFC107", "#8BC34A", "#4CAF50"]
-#                  1 pod       2 pods     3 pods      4 pods     5 pods
 
-# ── Plot ──────────────────────────────────────────────────────────────────────
+# Plot
 def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
     t0 = df["ts_iso"].iloc[0]
     df = df.copy()
@@ -120,7 +119,7 @@ def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
     fig, ax = plt.subplots(figsize=(12, 5))
     fig.suptitle(f"Estimated Response Time — {title}", fontsize=14, fontweight="bold")
 
-    # One line per pod count
+    # Plot one line for each pod count
     for c in range(1, max_replicas + 1):
         rt = df[pps_col].apply(lambda lam: response_time_ms(lam, c))
         ax.plot(df["elapsed"], rt,
@@ -128,7 +127,7 @@ def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
                 linewidth=2.0,
                 label=f"{c} pod{'s' if c > 1 else ''}")
 
-    # ── Phase annotations ─────────────────────────────────────────────────────
+    # Add traffic phase labels
     for x, label in phases:
         ax.axvline(x, color="gray", linewidth=0.8, linestyle=":")
         ax.text(x + 2, (MAX_RT_MS + 5) * 0.92, label,
@@ -149,7 +148,7 @@ def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
     print(f"  Saved: {out_path}")
     plt.close()
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     print("Generating response time plots...")
 
