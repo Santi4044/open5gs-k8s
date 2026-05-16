@@ -24,7 +24,7 @@ df["pps_forecast"] = pd.to_numeric(df["pps_forecast"], errors="coerce").fillna(0
 df["current_replicas"] = pd.to_numeric(df["current_replicas"], errors="coerce").fillna(1)
 df["desired_replicas"] = pd.to_numeric(df["desired_replicas"], errors="coerce").fillna(1)
 
-# Ideal replicas: ceil(pps / threshold), min 1, max 5
+# Calculate ideal replica count - ceil(pps / threshold), min 1, max 5
 THRESHOLD = 1500
 df["ideal_replicas"] = np.clip(np.ceil(df["pps_actual"] / THRESHOLD), 1, 5).astype(int)
 
