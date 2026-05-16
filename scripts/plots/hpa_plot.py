@@ -5,7 +5,7 @@ import numpy as np
 import glob
 import os
 
-# ── Auto-find latest HPA experiment folder ─────────────────────────────────────
+# Auto-find the latest HPA experiment output in the folder
 folders = sorted(glob.glob("results/*-hpa-experiment"))
 if not folders:
     raise FileNotFoundError("No HPA experiment results found in results/")
@@ -14,33 +14,33 @@ print(f"Using: {latest}")
 
 df = pd.read_csv(f"{latest}/watch.csv")
 
-# ── Compute elapsed seconds from ts_iso ────────────────────────────────────────
+# Calculate seconds since the first timestamp
 df["ts"] = pd.to_datetime(df["ts_iso"], utc=True)
 df["elapsed"] = (df["ts"] - df["ts"].iloc[0]).dt.total_seconds()
 
-# ── Handle NA in pps_prom ──────────────────────────────────────────────────────
+# Handle NA in pps_prom
 df["pps_prom"] = pd.to_numeric(df["pps_prom"], errors="coerce").fillna(0)
 df["hpa_replicas"] = pd.to_numeric(df["hpa_replicas"], errors="coerce").fillna(1)
 
-# ── Ideal replicas: ceil(pps / threshold), min 1, max 5 ───────────────────────
+# Ideal replicas: ceil(pps / threshold), min 1, max 5
 THRESHOLD = 1500
 df["ideal_replicas"] = np.clip(np.ceil(df["pps_prom"] / THRESHOLD), 1, 5).astype(int)
 
-# ── Detect scale events from replica changes ───────────────────────────────────
+# Detect scale events from replica changes
 df["replica_change"] = df["hpa_replicas"].diff()
 scale_up   = df[df["replica_change"] > 0]
 scale_down = df[df["replica_change"] < 0]
 
-# ── Figure ─────────────────────────────────────────────────────────────────────
+# Figure
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
 fig.suptitle("HPA Autoscaling – Live Experiment", fontsize=14, fontweight="bold")
 
-# ── Top plot: PPS + threshold ──────────────────────────────────────────────────
+# Top plot: PPS + threshold
 ax1.plot(df["elapsed"], df["pps_prom"], color="#2196F3", linewidth=2, label="Actual PPS")
 ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label="Threshold (1500 PPS)")
 ax1.fill_between(df["elapsed"], df["pps_prom"], alpha=0.1, color="#2196F3")
 
-# ── Scale event markers ────────────────────────────────────────────────────────
+# Scale event markers
 ax1.scatter(scale_up["elapsed"],   scale_up["pps_prom"],
             color="green", zorder=5, s=80, marker="^", label="Scale Up")
 ax1.scatter(scale_down["elapsed"], scale_down["pps_prom"],
@@ -51,7 +51,7 @@ ax1.legend(loc="upper right", fontsize=9)
 ax1.set_ylim(bottom=0)
 ax1.grid(True, alpha=0.3)
 
-# ── Phase labels ───────────────────────────────────────────────────────────────
+# Phase labels
 phases = [
     (0,   "IDLE\n(30s)"),
     (30,  "LOW\n(10M/60s)"),
@@ -63,7 +63,7 @@ for x, label in phases:
     ax1.axvline(x, color="gray", linewidth=0.8, linestyle=":")
     ax1.text(x + 2, ax1.get_ylim()[1] * 0.92, label, fontsize=7.5, color="gray")
 
-# ── Bottom plot: Replicas ──────────────────────────────────────────────────────
+# Bottom plot: Replicas
 ax2.step(df["elapsed"], df["hpa_replicas"], where="post",
          color="#4CAF50", linewidth=2, label="HPA Replicas")
 ax2.step(df["elapsed"], df["ideal_replicas"], where="post",
@@ -75,7 +75,7 @@ ax2.yaxis.set_major_locator(ticker.MultipleLocator(1))
 ax2.legend(loc="upper right", fontsize=9)
 ax2.grid(True, alpha=0.3)
 
-# ── Phase lines on bottom plot too ─────────────────────────────────────────────
+# Add phase lines to the bottom plot
 for x, _ in phases:
     ax2.axvline(x, color="gray", linewidth=0.8, linestyle=":")
 
