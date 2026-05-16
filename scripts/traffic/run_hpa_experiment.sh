@@ -36,11 +36,11 @@ echo "Idle ${IDLE2}s"
 sleep "$IDLE2"
 
 # Phase 4: high traffic period
-echo "Peak traffic ${PEAK_RATE} for ${PEAK_DUR}s (should trigger HPA scale-up)"
+echo "Peak traffic ${PEAK_RATE} for ${PEAK_DUR}s"
 BITRATE="$PEAK_RATE" DURATION="$PEAK_DUR" scripts/traffic/run_iperf_udp.sh | tee -a "$OUT_LOG"
 
 # Phase 5: final idle period
-echo "Cool-down idle ${IDLE3}s (watching scale down)"
+echo "Cool-down idle ${IDLE3}s"
 sleep "$IDLE3"
 
 echo "Done. Results saved to:"
