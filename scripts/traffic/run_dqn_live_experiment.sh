@@ -1,14 +1,14 @@
-#!/usr/bin/env bash
+# !/usr/bin/env bash
 set -uo pipefail
 
 OUT_DIR="${OUT_DIR:-results/$(date +%Y%m%d-%H%M%S)-dqn-experiment}"
 mkdir -p "$OUT_DIR"
 
-echo "========================================="
-echo "  DQN Live Scaling Experiment"
-echo "  $(date -u +%FT%T%z)"
-echo "  Output dir: $OUT_DIR"
-echo "========================================="
+echo "================================="
+echo "DQN Live Scaling Experiment"
+echo "$(date -u +%FT%T%z)"
+echo "Output dir: $OUT_DIR"
+echo "================================="
 
 NS="open5gs"
 UE_POD=$(kubectl get pod -n "$NS" -l name=ue1 \
@@ -19,7 +19,7 @@ pkill iperf3 2>/dev/null; sleep 1
 iperf3 -s -D -p 5201
 echo "iperf3 server started"
 
-# Start DQN live controller with PRE-TRAINED model
+# Start the DQN live controller with a pre-trained model
 echo "Starting DQN live controller (pre-trained model)..."
 python manifests/autoscaling/dqn/dqn_live_controller.py \
   --interval 5 \
@@ -30,11 +30,11 @@ python manifests/autoscaling/dqn/dqn_live_controller.py \
 CTRL_PID=$!
 echo "Controller PID: $CTRL_PID"
 
-# Wait for controller to initialize
-echo "Waiting for controller to initialize (~10s)..."
+# Wait for the controller to initialise
+echo "Waiting for controller to initialise..."
 sleep 10
 
-# Run burst traffic pattern
+# Traffic phases
 run_phase() {
   local label="$1" bitrate="$2" dur="$3"
   echo ""
@@ -56,17 +56,17 @@ run_phase "5-IDLE"   0    120
 
 # Let controller observe cooldown
 echo ""
-echo "All phases complete. Waiting 30s for controller to stabilize..."
+echo "All phases complete. Waiting 30s for controller to stabilise..."
 sleep 30
 
-# Stop controller
+# Stop the controller
 kill $CTRL_PID 2>/dev/null
 wait $CTRL_PID 2>/dev/null
 echo ""
-echo "========================================="
-echo "  DQN Live Experiment — Complete"
-echo "  $(date -u +%FT%T%z)"
-echo "========================================="
+echo "=================================="
+echo "DQN Live Experiment - Completed"
+echo "$(date -u +%FT%T%z)"
+echo "=================================="
 echo ""
 echo "Results saved to: $OUT_DIR"
 echo "=== Results CSV ==="
