@@ -17,27 +17,27 @@ for i in $(seq 1 $TOTAL_RUNS); do
     if [ "$i" -eq "$TOTAL_RUNS" ]; then
         label="test_1"
         echo ""
-        echo ">>> Run $i/$TOTAL_RUNS — TEST SET ($label) <<<"
+        echo "--- Run $i/$TOTAL_RUNS — TEST SET ($label) ---"
     else
         label="train_${i}"
         echo ""
-        echo ">>> Run $i/$TOTAL_RUNS — TRAINING ($label) <<<"
+        echo "--- Run $i/$TOTAL_RUNS — TRAINING ($label) ---"
     fi
 
     CSV="$DATA_DIR/${label}.csv"
 
-    # Start watcher
+    # Start the watcher
     OUT_CSV="$CSV" "$SCRIPT_DIR/watch_scaling_prom.sh" &
     WATCHER_PID=$!
     sleep 3
 
-    # Run burst traffic
+    # Run the traffic pattern
     "$SCRIPT_DIR/run_burst_pattern.sh"
 
-    # Wait for trailing data
+    # Wait for trailing data before stopping the watcher
     sleep 30
 
-    # Stop watcher
+    # Stop the watcher
     kill $WATCHER_PID 2>/dev/null
     wait $WATCHER_PID 2>/dev/null
 
