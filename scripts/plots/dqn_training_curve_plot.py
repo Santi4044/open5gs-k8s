@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
-DQN Training Plots — Reward Function and Epsilon
+DQN Training Plots - Reward Function and Epsilon
 """
 
 import pandas as pd
@@ -8,9 +8,25 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import glob
+import os
 
-# Load training data
-CSV = "manifests/autoscaling/dqn/results/dqn_live_log_training_curve.csv"
+# Auto-find the latest DQN experiment folder that has the training curve CSV
+folders = sorted(glob.glob("results/*-dqn-experiment"), reverse=True)
+CSV = None
+OUT_DIR = None
+for folder in folders:
+    candidate = os.path.join(folder, "dqn_live_training_curve.csv")
+    if os.path.isfile(candidate):
+        CSV = candidate
+        OUT_DIR = folder
+        break
+
+if CSV is None:
+    raise FileNotFoundError("No dqn_live_training_curve.csv found in any results/*-dqn-experiment folder")
+
+print(f"Using: {OUT_DIR}")
+
 df = pd.read_csv(CSV)
 
 WINDOW = 50
@@ -26,12 +42,10 @@ df["epsilon"] = df["episode"].apply(
 # Calculate rolling average reward
 df["rolling_avg"] = df["total_reward"].rolling(window=WINDOW, min_periods=1).mean()
 
-OUT_DIR = "manifests/autoscaling/dqn/results"
 
-
-# === Plot 1 — Reward Function Plot ===
+# === Plot 1 - Reward Function Plot ===
 fig1, ax1 = plt.subplots(figsize=(12, 5))
-fig1.suptitle("DQN Training – Reward per Episode", fontsize=14, fontweight="bold")
+fig1.suptitle("DQN Training - Reward per Episode", fontsize=14, fontweight="bold")
 
 ax1.plot(df["episode"], df["rolling_avg"],
          color="darkorange", lw=2.5, label=f"Rolling Average (window={WINDOW})")
@@ -44,7 +58,7 @@ ax1.legend(fontsize=9)
 ax1.grid(True, alpha=0.3)
 plt.tight_layout()
 
-# == Plot 2 — Epsilon Decay Plot ===
+# === Plot 2 - Epsilon Decay Plot ===
 fig2, ax2 = plt.subplots(figsize=(12, 4))
 fig2.suptitle("DQN Training – Epsilon Decay (Exploration -> Exploitation)",
               fontsize=14, fontweight="bold")

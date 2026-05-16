@@ -414,7 +414,7 @@ Log:        {os.path.basename(args.log):<35s}
             agent.save(args.save_model)
 
         # Save training curve
-        curve_path = args.log.replace(".csv", "_training_curve.csv")
+        curve_path = os.path.join(os.path.dirname(args.log), "dqn_live_training_curve.csv")
         os.makedirs(os.path.dirname(curve_path) or ".", exist_ok=True)
         pd.DataFrame({"episode": range(len(rewards)),
                        "total_reward": rewards}).to_csv(curve_path, index=False)
