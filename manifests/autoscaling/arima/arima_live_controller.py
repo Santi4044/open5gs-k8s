@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-ARIMA Live Autoscaling Controller for 5G UPF.
+ARIMA Live Autoscaling Controller.
 
 Runs a control loop that:
-  1. Queries Prometheus for current PPS every --interval seconds
+  1. Queries Prometheus for the current PPS every 5 interval seconds
   2. Maintains a sliding window of PPS history
   3. Fits ARIMA on the window and forecasts future PPS
   4. Computes desired replicas from forecasted PPS
   5. Executes kubectl scale if replicas need to change
-  6. Logs all decisions to CSV + exposes metrics for Grafana
+  6. Logs all decisions to CSV, and exposes metrics for Grafana
 
 Usage:
-    python arima_live_controller.py --threshold 4000 --interval 5 --horizon 3
+    python arima_live_controller.py --threshold 1500 --interval 5 --horizon 3
 """
 
 import argparse
@@ -56,7 +56,6 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-
 def query_prometheus_via_kubectl():
     """Query Prometheus from inside the cluster using kubectl run (same as watcher)."""
     prom_url = PROM_URL
@@ -81,14 +80,12 @@ def query_prometheus_via_kubectl():
         print(f"  [warn] Prometheus query failed: {e}")
     return None
 
-
 def get_pps_from_prometheus():
     """Get UPF PPS using kubectl-based Prometheus query."""
     pps = query_prometheus_via_kubectl()
     if pps is not None:
         return pps
     return 0.0
-
 
 def get_current_replicas():
     """Get current replica count from kubectl."""
@@ -103,7 +100,6 @@ def get_current_replicas():
     except Exception:
         return 1
 
-
 def scale_deployment(desired):
     """Execute kubectl scale."""
     try:
@@ -117,14 +113,12 @@ def scale_deployment(desired):
         print(f"  [error] Scale failed: {e}")
         return False
 
-
 def pps_to_replicas(pps, threshold=4000, max_replicas=5):
     """Convert PPS to desired replica count."""
     if pps <= 0:
         return 1
     desired = int(np.ceil(pps / threshold))
     return max(1, min(desired, max_replicas))
-
 
 def arima_forecast(history, order=(2, 1, 2), horizon=3):
     """Fit ARIMA on history and return forecasted PPS."""
@@ -140,7 +134,6 @@ def arima_forecast(history, order=(2, 1, 2), horizon=3):
         weights = np.exp(np.linspace(-1, 0, len(arr)))
         weights /= weights.sum()
         return max(0, float(np.dot(arr, weights)))
-
 
 def main():
     parser = argparse.ArgumentParser(description="ARIMA Live Controller")
@@ -266,7 +259,6 @@ Log:        {os.path.basename(args.log):<35s}
                 capture_output=True, text=True
             )
             print("[cleanup] HPA re-enabled.")
-
 
 if __name__ == "__main__":
     main()
