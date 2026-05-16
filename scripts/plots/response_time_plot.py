@@ -3,8 +3,8 @@
 Estimated Response Time using M/M/c Queuing Model
 - X-axis: Time (seconds)
 - Y-axis: Estimated Response Time (ms)
-- Lines: one per pod count (1 to max_replicas used by algorithm)
-- Phase annotations (vertical lines + labels) matching existing plot scripts
+- Lines: one per pod count
+- Phase annotations (vertical lines + labels)
 - Separate plot for HPA, ARIMA, DQN
 """
 
@@ -16,7 +16,7 @@ import math
 import os
 
 # Config
-MU        = 1500    # service rate per replica (PPS threshold)
+MU        = 1500    # PPS threshold
 MAX_RT_MS = 50.0    # cap for saturated/overloaded state (ms)
 BASE_RT   = (1 / MU) * 1000  # ~0.667ms minimum service time
 
