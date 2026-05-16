@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+# !/usr/bin/env bash
 set -uo pipefail
 
-#Output dir (timestamped)
+# Create a timestamped output folder
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 OUT_DIR="results/${TIMESTAMP}-arima-experiment"
 mkdir -p "$OUT_DIR"
@@ -14,8 +14,8 @@ UE_POD=$(kubectl get pod -n "$NS" -l name=ue1 \
 LOG_CSV="${OUT_DIR}/arima_live.csv"
 TRAFFIC_LOG="${OUT_DIR}/traffic.log"
 
-#Start ARIMA live controller
-echo "[exp] Starting ARIMA live controller..."
+# Start the ARIMA live controller
+echo "Starting ARIMA live controller..."
 python manifests/autoscaling/arima/arima_live_controller.py \
   --interval 5 \
   --threshold 1500 \
@@ -27,12 +27,12 @@ python manifests/autoscaling/arima/arima_live_controller.py \
 CTRL_PID=$!
 echo "Controller PID: $CTRL_PID"
 
-#Wait for controller to initialise
-echo "Waiting 3s for controller to initialise..."
+# Wait for the controller to initialise
+echo "Waiting 3s for the controller to initialise..."
 
 sleep 3
 
-#Traffic phases
+# Traffic phases
 run_phase() {
   local label="$1" bitrate="$2" dur="$3"
   echo "Phase: $label | bitrate=$bitrate | dur=${dur}s" | tee -a "$TRAFFIC_LOG"
@@ -53,16 +53,16 @@ run_phase "3-IDLE"  0    30
 run_phase "4-HIGH"  40M  120
 run_phase "5-IDLE"  0    120
 
-#Let controller observe final cooldown
-echo "[exp] All phases done. Waiting 30s for controller to stabilise..."
+# Wait before stopping the controller
+echo "All traffic phases done. Waiting 30s for controller to stabilise..."
 sleep 30
 
-#Stop controller
-echo "[exp] Stopping controller (PID $CTRL_PID)..."
+# Stop the controller
+echo "Stopping controller (PID $CTRL_PID)..."
 kill $CTRL_PID 2>/dev/null
 wait $CTRL_PID 2>/dev/null
 
 echo ""
-echo "[exp] Done. Results saved to:"
+echo "Done. Results saved to:"
 echo "  - $LOG_CSV"
 echo "  - $TRAFFIC_LOG"
