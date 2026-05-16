@@ -36,7 +36,7 @@ phases = [
 
 THRESHOLD = 1500
 
-# Calculate ideal replica count
+# Calculate ideal replica count - ceil(pps / threshold), min 1, max 5
 def ideal_replicas(pps, threshold=THRESHOLD, max_r=5):
     if pps <= 0:
         return 1
@@ -52,7 +52,7 @@ scale_down = df[(df["dqn_action"] == "scale down") & (df["scale_executed"].astyp
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7), sharex=True)
 fig.suptitle("DQN Autoscaling – Live Experiment", fontsize=14, fontweight="bold")
 
-# Top plot: PPS and threshold
+# Top plot: PPS + threshold
 ax1.plot(df["elapsed"], df["pps_actual"], color="#2196F3", linewidth=2, label="Actual PPS")
 ax1.axhline(THRESHOLD, color="#F44336", linewidth=1.5, linestyle="--", label="Threshold (1500 PPS)")
 ax1.fill_between(df["elapsed"], df["pps_actual"], alpha=0.1, color="#2196F3")
@@ -72,7 +72,7 @@ for x, label in phases:
     ax1.axvline(x, color="gray", linewidth=0.8, linestyle=":")
     ax1.text(x + 2, ax1.get_ylim()[1] * 0.92, label, fontsize=7.5, color="gray")
 
-# Bottom plot: DQN Replicas and Ideal Replicas
+# Bottom plot: DQN Replicas + Ideal Replicas
 ax2.step(df["elapsed"], df["current_replicas"], where="post",
          color="#4CAF50", linewidth=2, label="DQN Replicas")
 ax2.step(df["elapsed"], df["ideal"], where="post",
