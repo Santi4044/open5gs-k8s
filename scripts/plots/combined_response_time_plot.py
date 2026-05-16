@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Combined Estimated Response Time — Autoscaling Comparison
-Plots HPA, ARIMA, DQN actual response time vs No Autoscaling baseline (1 pod fixed)
-using M/M/c queuing model.
+Combined Estimated Response Time
+Plots HPA, ARIMA, DQN actual response time vs No Autoscaling baseline (1 pod) using M/M/c queuing model.
 """
 
 import pandas as pd
@@ -12,12 +11,12 @@ import glob
 import math
 import os
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 MU        = 1500
 MAX_RT_MS = 50.0
 BASE_RT   = (1 / MU) * 1000
 
-# ── Phase lines (HPA as reference) ───────────────────────────────────────────
+# Traffic Phase labels
 PHASES = [
     (0,   "IDLE\n(30s)"),
     (30,  "LOW\n(10M/60s)"),
@@ -26,7 +25,7 @@ PHASES = [
     (240, "IDLE\n(120s)"),
 ]
 
-# ── Erlang-C ──────────────────────────────────────────────────────────────────
+# Erlang-C formula to calculate queueing delay
 def erlang_c(c, lam, mu):
     rho = lam / (c * mu)
     if rho >= 1.0:
@@ -46,7 +45,7 @@ def response_time_ms(lam, c, mu=MU):
     w_s = (1.0 / mu) + ec / (c * mu - lam)
     return min(w_s * 1000, MAX_RT_MS)
 
-# ── Loaders ───────────────────────────────────────────────────────────────────
+# Load result files
 def find_latest_folder(pattern, filename):
     folders = sorted(glob.glob(pattern), reverse=True)
     for f in folders:
@@ -83,7 +82,7 @@ def load_dqn():
     df["current_replicas"] = df["current_replicas"].clip(lower=1)
     return df.sort_values("ts_iso").reset_index(drop=True)
 
-# ── Compute elapsed + response time ──────────────────────────────────────────
+# Add elapsed time and response time
 def add_elapsed_and_rt(df, pps_col="pps_actual"):
     df = df.copy()
     df["elapsed"] = (df["ts_iso"] - df["ts_iso"].iloc[0]).dt.total_seconds()
@@ -91,7 +90,7 @@ def add_elapsed_and_rt(df, pps_col="pps_actual"):
     df["rt_no_autoscale"] = df[pps_col].apply(lambda lam: response_time_ms(lam, 1))
     return df
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     print("Loading data...")
     hpa_df   = add_elapsed_and_rt(load_hpa())
@@ -106,7 +105,7 @@ if __name__ == "__main__":
     ax.plot(hpa_df["elapsed"], hpa_df["rt_no_autoscale"],
             color="#F44336", linewidth=2, linestyle="--", label="No Autoscaling (1 pod)")
 
-    # Each algorithm's actual response time
+    # Plot response time for each algorithm
     ax.plot(hpa_df["elapsed"],   hpa_df["rt"],
             color="#2196F3", linewidth=2, linestyle="-", label="HPA")
     ax.plot(arima_df["elapsed"], arima_df["rt"],
@@ -114,7 +113,7 @@ if __name__ == "__main__":
     ax.plot(dqn_df["elapsed"],   dqn_df["rt"],
             color="#4CAF50", linewidth=2, linestyle="-", label="DQN")
 
-    # Phase annotations
+    # Add traffic phase labels
     for x, label in PHASES:
         ax.axvline(x, color="gray", linewidth=0.8, linestyle=":")
         ax.text(x + 2, (MAX_RT_MS + 5) * 0.92, label,
