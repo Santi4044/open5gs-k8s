@@ -485,12 +485,20 @@ Log:        {os.path.basename(args.log):<35s}
             scaled = False
             time_since_last = time.time() - last_scale_time
 
-            if desired != current_replicas and time_since_last >= args.cooldown:
+            if desired == current_replicas:
+                action_name = "hold"
+            elif time_since_last >= args.cooldown:
                 if not args.dry_run:
                     scaled = scale_deployment(desired)
                     if scaled:
                         last_scale_time = time.time()
-            elif desired == current_replicas:
+                        action_name = ACTION_NAMES[action]
+                    else:
+                        action_name = "hold"
+                else:
+                    # In dry-run, show the intended action since no scaling is executed
+                    action_name = ACTION_NAMES[action]
+            else:
                 action_name = "hold"
 
             # 6. Log
