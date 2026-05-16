@@ -41,10 +41,10 @@ run_phase() {
   fi
 }
 
-echo "========================================="
-echo "  Burst Traffic Pattern 1 — Gradual Ramp"
-echo "  $(date -u +%FT%T%z)"
-echo "========================================="
+echo "======================================="
+echo "Burst Traffic Pattern 1 — Gradual Ramp"
+echo "$(date -u +%FT%T%z)"
+echo "======================================="
 
 run_phase "1-IDLE"  0    30
 run_phase "2-LOW"   10M  60
@@ -53,7 +53,7 @@ run_phase "4-HIGH"  40M  60
 run_phase "5-IDLE"  0    120
 
 echo ""
-echo "========================================="
-echo "  Burst Traffic Pattern 1 - Completed"
-echo "  $(date -u +%FT%T%z)"
-echo "========================================="
+echo "====================================="
+echo "Burst Traffic Pattern 1 - Completed"
+echo "$(date -u +%FT%T%z)"
+echo "====================================="
