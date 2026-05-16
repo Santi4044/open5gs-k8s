@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot DQN autoscaling results for thesis."""
+"""Plot DQN autoscaling results."""
 import argparse, os
 import pandas as pd
 import matplotlib
