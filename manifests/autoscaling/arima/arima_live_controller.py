@@ -48,6 +48,7 @@ NAMESPACE  = "open5gs"
 
 running = True
 
+
 def signal_handler(sig, frame):
     global running
     print("\n[ctrl] Shutting down gracefully...")
@@ -55,6 +56,7 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
 
 def query_prometheus_via_kubectl():
     """Query Prometheus from inside the cluster using kubectl run (same as watcher)."""
@@ -80,12 +82,14 @@ def query_prometheus_via_kubectl():
         print(f"  [warn] Prometheus query failed: {e}")
     return None
 
+
 def get_pps_from_prometheus():
     """Get UPF PPS using kubectl-based Prometheus query."""
     pps = query_prometheus_via_kubectl()
     if pps is not None:
         return pps
     return 0.0
+
 
 def get_current_replicas():
     """Get current replica count from kubectl."""
@@ -100,6 +104,7 @@ def get_current_replicas():
     except Exception:
         return 1
 
+
 def scale_deployment(desired):
     """Execute kubectl scale."""
     try:
@@ -113,12 +118,14 @@ def scale_deployment(desired):
         print(f"  [error] Scale failed: {e}")
         return False
 
+
 def pps_to_replicas(pps, threshold=4000, max_replicas=5):
     """Convert PPS to desired replica count."""
     if pps <= 0:
         return 1
     desired = int(np.ceil(pps / threshold))
     return max(1, min(desired, max_replicas))
+
 
 def arima_forecast(history, order=(2, 1, 2), horizon=3):
     """Fit ARIMA on history and return forecasted PPS."""
@@ -134,6 +141,7 @@ def arima_forecast(history, order=(2, 1, 2), horizon=3):
         weights = np.exp(np.linspace(-1, 0, len(arr)))
         weights /= weights.sum()
         return max(0, float(np.dot(arr, weights)))
+
 
 def main():
     parser = argparse.ArgumentParser(description="ARIMA Live Controller")
