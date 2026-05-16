@@ -4,8 +4,7 @@ Estimated Response Time vs Request Rate (PPS)
 - X-axis: Request Rate (PPS)
 - Y-axis: Estimated Response Time (ms)
 - Lines: No Autoscaling, HPA, ARIMA, DQN
-- Based on M/M/c queuing model with integer replica step functions
-  matching each algorithm's real scaling behaviour from experiments
+- Based on M/M/c queuing model with integer replica step functions matching each algorithm's real scaling behaviour from experiments
 """
 
 import numpy as np
@@ -14,12 +13,12 @@ import matplotlib.ticker as ticker
 import math
 import os
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 MU        = 1500
 MAX_RT_MS = 50.0
 BASE_RT   = (1 / MU) * 1000
 
-# ── Erlang-C ──────────────────────────────────────────────────────────────────
+# Erlang-C formula to calculate queueing delay
 def erlang_c(c, lam, mu):
     rho = lam / (c * mu)
     if rho >= 1.0:
@@ -40,11 +39,11 @@ def response_time_ms(lam, c, mu=MU):
     w_s = (1.0 / mu) + ec / (c * mu - lam)
     return min(w_s * 1000, MAX_RT_MS)
 
-# ── Replica step functions ─────────────────────────────────────────────────────
+# Replica step functions
 # Based on real experiment results:
-#   HPA   → reactive delay, over-provisioned to 5 pods
-#   ARIMA → predicts early (~300 PPS before threshold), max 4 pods
-#   DQN   → scales precisely at threshold, max 3 pods (no overshoot)
+# HPA - reactive delay, over-provisioned to 5 pods
+# ARIMA - predicts early (~300 PPS before threshold), max 4 pods
+# DQN - scales precisely at threshold, max 3 pods (no overshoot)
 
 def replicas_no_autoscale(pps): return 1
 
@@ -66,7 +65,7 @@ def replicas_dqn(pps):
     elif pps < 3000: return 2
     else:            return 3
 
-# ── Sweep PPS range ───────────────────────────────────────────────────────────
+# Generate request rate values
 pps_range = np.linspace(0, 4400, 4000)
 
 rt_no_autoscale = np.array([response_time_ms(p, replicas_no_autoscale(p)) for p in pps_range])
@@ -74,7 +73,7 @@ rt_hpa          = np.array([response_time_ms(p, replicas_hpa(p))          for p 
 rt_arima        = np.array([response_time_ms(p, replicas_arima(p))        for p in pps_range])
 rt_dqn          = np.array([response_time_ms(p, replicas_dqn(p))          for p in pps_range])
 
-# ── Plot ──────────────────────────────────────────────────────────────────────
+# Plot
 fig, ax = plt.subplots(figsize=(10, 5))
 fig.suptitle("Estimated Response Time vs Request Rate",
              fontsize=14, fontweight="bold")
