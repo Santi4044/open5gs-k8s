@@ -40,7 +40,7 @@ echo "Peak traffic ${PEAK_RATE} for ${PEAK_DUR}s"
 BITRATE="$PEAK_RATE" DURATION="$PEAK_DUR" scripts/traffic/run_iperf_udp.sh | tee -a "$OUT_LOG"
 
 # Phase 5: final idle period
-echo "Cool-down idle ${IDLE3}s"
+echo "Idle ${IDLE3}s"
 sleep "$IDLE3"
 
 echo "Done. Results saved to:"
