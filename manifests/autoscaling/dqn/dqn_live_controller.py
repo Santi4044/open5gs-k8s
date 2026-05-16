@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-DQN Live Autoscaling Controller for 5G UPF.
+DQN Live Autoscaling Controller.
 
 Runs a control loop that:
-  1. Trains DQN agent on historical CSV data (train_2-5.csv) at startup
-  2. Queries Prometheus for current PPS every --interval seconds
-  3. DQN agent picks action: scale_down / hold / scale_up
+  1. Trains DQN agent on historical CSV data at startup
+  2. Queries Prometheus for the current PPS every 5 interval seconds
+  3. DQN agent picks action: scale down, scale up, or hold
   4. Executes kubectl scale if replicas need to change
   5. Logs all decisions to CSV
 
@@ -273,7 +273,7 @@ def train_on_files(agent, csv_files, episodes_per_file, threshold, max_replicas)
     return rewards_history
 
 
-# ── Kubernetes / Prometheus helpers (same as ARIMA live) ────────────
+# Kubernetes / Prometheus helpers
 
 def query_prometheus_via_kubectl():
     """Query Prometheus from inside the cluster using kubectl run."""
@@ -428,7 +428,7 @@ Log:        {os.path.basename(args.log):<35s}
     agent.epsilon = 0.0
     print(f"\n[live] Agent epsilon set to 0 (greedy mode)")
 
-    # ── Setup CSV log ──
+    # Setup CSV log
     os.makedirs(os.path.dirname(args.log) or ".", exist_ok=True)
     log_file = open(args.log, "w", newline="")
     writer = csv.writer(log_file)
@@ -437,7 +437,7 @@ Log:        {os.path.basename(args.log):<35s}
         "desired_replicas", "dqn_action", "scale_executed"
     ])
 
-    # ── Disable HPA ──
+    # Disable HPA
     if not args.dry_run:
         print("[init] Disabling HPA for UPF1...")
         subprocess.run(
@@ -448,7 +448,7 @@ Log:        {os.path.basename(args.log):<35s}
     else:
         print("[init] DRY-RUN mode — HPA not modified.\n")
 
-    # ── Control loop ──
+    # Control loop
     step = 0
     prev_pps = 0.0
     last_scale_time = 0
@@ -460,7 +460,7 @@ Log:        {os.path.basename(args.log):<35s}
             now = datetime.now(timezone.utc)
             ts = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
-            # 1. Get current PPS
+            # 1. Get the current PPS
             pps = get_pps_from_prometheus()
             current_replicas = get_current_replicas()
 
