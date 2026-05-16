@@ -9,10 +9,10 @@ PASS=0; FAIL=0
 check() {
   local desc="$1"; shift
   if "$@" > /dev/null 2>&1; then
-    echo "  ✅ $desc"
+    echo "  [PASS] $desc"
     ((PASS++))
   else
-    echo "  ❌ $desc"
+    echo "  [FAIL] $desc"
     ((FAIL++))
   fi
 }
