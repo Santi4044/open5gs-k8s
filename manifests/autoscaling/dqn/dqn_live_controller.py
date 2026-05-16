@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 DQN Live Autoscaling Controller.
 
@@ -66,7 +66,6 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 
 #DQN Model & Agent (self-contained, mirrors dqn_predictor.py)
-
 class UPFScalingEnv:
     """Simulated UPF scaling environment for offline training."""
     def __init__(self, pps_series, threshold=4000, min_replicas=1, max_replicas=5):
@@ -216,7 +215,6 @@ class DQNAgent:
 
 
 #Training
-
 def load_training_data(csv_path):
     """Load watcher CSV and extract PPS series."""
     df = pd.read_csv(csv_path)
@@ -274,7 +272,6 @@ def train_on_files(agent, csv_files, episodes_per_file, threshold, max_replicas)
 
 
 # Kubernetes / Prometheus helpers
-
 def query_prometheus_via_kubectl():
     """Query Prometheus from inside the cluster using kubectl run."""
     query = ('sum(rate(fivegs_ep_n3_gtp_indatapktn3upf'
@@ -335,7 +332,6 @@ def scale_deployment(desired):
 
 
 #Main
-
 ACTION_NAMES = {0: "scale down", 1: "hold", 2: "scale up"}
 
 
