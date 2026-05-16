@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Post-experiment analysis and visualization.
+Experiment analysis and visualization.
 
-Reads ARIMA results CSV and generates thesis-quality plots:
-  1. PPS over time (actual vs predicted)
-  2. Replicas over time (actual HPA vs ARIMA-predicted)
-  3. Prediction error over time
+Reads ARIMA results CSV and generates plots:
+  1. Actual vs predicted PPS over time
+  2. Actual vs predicted replica counts over time
 
 Usage:
     python analyze_experiment.py <arima_results.csv> [--save-dir DIR]
