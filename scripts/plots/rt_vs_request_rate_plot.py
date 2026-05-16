@@ -14,9 +14,10 @@ import math
 import os
 
 # Config
-MU        = 1500
-MAX_RT_MS = 50.0
-BASE_RT   = (1 / MU) * 1000
+MU        = 1500  # PPS threshold
+MAX_RT_MS = 50.0  # cap for saturated/overloaded state (ms)
+BASE_RT   = (1 / MU) * 1000  # ~0.667ms minimum service time
+
 
 # Erlang-C formula to calculate queueing delay
 def erlang_c(c, lam, mu):
