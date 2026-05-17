@@ -42,7 +42,7 @@ run_phase() {
 }
 
 echo "========================================"
-echo "Burst Traffic Pattern 2 — Sudden Spike"
+echo "Burst Traffic Pattern 2 - Sudden Spike"
 echo "$(date -u +%FT%T%z)"
 echo "========================================"
 
@@ -54,6 +54,6 @@ run_phase "5-IDLE"   0    60
 
 echo ""
 echo "===================================="
-echo "Burst Traffic Pattern 2 — Completed"
+echo "Burst Traffic Pattern 2 - Completed"
 echo "$(date -u +%FT%T%z)"
 echo "===================================="
