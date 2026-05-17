@@ -263,7 +263,7 @@ Log:        {os.path.basename(args.log):<35s}
             print("[cleanup] Re-enabling HPA...")
             subprocess.run(
                 ["kubectl", "apply", "-f",
-                 "manifests/autoscaling/hpa-upf1-pps.yaml"],
+                 "manifests/autoscaling/hpa/hpa-upf1-pps.yaml"],
                 capture_output=True, text=True
             )
             print("[cleanup] HPA re-enabled.")
