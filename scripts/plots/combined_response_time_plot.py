@@ -76,11 +76,7 @@ def load_dqn():
             df = pd.read_csv(f"{f}/dqn_live.csv", parse_dates=["ts_iso"])
             df["current_replicas"] = df["current_replicas"].clip(lower=1)
             return df.sort_values("ts_iso").reset_index(drop=True)
-    fallback = "manifests/autoscaling/dqn/results/dqn_live_experiment.csv"
-    print(f"  [DQN] fallback: {fallback}")
-    df = pd.read_csv(fallback, parse_dates=["ts_iso"])
-    df["current_replicas"] = df["current_replicas"].clip(lower=1)
-    return df.sort_values("ts_iso").reset_index(drop=True)
+    raise FileNotFoundError("No dqn_live.csv found in any results/*-dqn-experiment folder")
 
 # Add elapsed time and response time
 def add_elapsed_and_rt(df, pps_col="pps_actual"):

@@ -98,11 +98,7 @@ def load_dqn():
             df = pd.read_csv(f"{f}/dqn_live.csv", parse_dates=["ts_iso"])
             df["current_replicas"] = df["current_replicas"].clip(lower=1)
             return df.sort_values("ts_iso").reset_index(drop=True), f
-    fallback = "manifests/autoscaling/dqn/results/dqn_live_experiment.csv"
-    print(f"  [DQN] fallback: {fallback}")
-    df = pd.read_csv(fallback, parse_dates=["ts_iso"])
-    df["current_replicas"] = df["current_replicas"].clip(lower=1)
-    return df.sort_values("ts_iso").reset_index(drop=True), "manifests/autoscaling/dqn/results"
+    raise FileNotFoundError("No dqn_live.csv found in any results/*-dqn-experiment folder")
 
 # Colors for each pod count (1 pod, 2 pods, 3 pods, 4 pods, 5 pods)
 REPLICA_COLORS = ["#F44336", "#FF9800", "#FFC107", "#8BC34A", "#4CAF50"]
