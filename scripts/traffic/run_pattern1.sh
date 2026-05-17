@@ -42,7 +42,7 @@ run_phase() {
 }
 
 echo "======================================="
-echo "Burst Traffic Pattern 1 — Gradual Ramp"
+echo "Burst Traffic Pattern 1 - Gradual Ramp"
 echo "$(date -u +%FT%T%z)"
 echo "======================================="
 
