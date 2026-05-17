@@ -331,7 +331,7 @@ def scale_deployment(desired):
         return False
 
 
-#Main
+# Main
 ACTION_NAMES = {0: "scale down", 1: "hold", 2: "scale up"}
 
 
@@ -359,9 +359,13 @@ def main():
                         help="Output log CSV")
     parser.add_argument("--dry-run", action="store_true",
                         help="Don't actually scale, just log decisions")
+
+    parser.add_argument("--train-only", action="store_true",
+                        help="Train the model and exit without starting the live loop")
+
     args = parser.parse_args()
 
-    # ── Initialize agent ──
+    # Initialise agent
     agent = DQNAgent(state_size=3, action_size=3, memory_size=10000)
 
     mode = "DRY-RUN" if args.dry_run else "LIVE"
@@ -418,7 +422,11 @@ Log:        {os.path.basename(args.log):<35s}
         os.makedirs(os.path.dirname(curve_path) or ".", exist_ok=True)
         pd.DataFrame({"episode": range(len(rewards)),
                        "total_reward": rewards}).to_csv(curve_path, index=False)
-        print(f"  [train] Training curve saved to {curve_path}")
+        print(f"[train] Training curve saved to {curve_path}")
+
+        if args.train_only:
+            print("\n[train-only] Training complete. Exiting without starting live loop.")
+            sys.exit(0)
 
     # Set epsilon to 0 for live mode (pure exploitation)
     agent.epsilon = 0.0
@@ -435,14 +443,14 @@ Log:        {os.path.basename(args.log):<35s}
 
     # Disable HPA
     if not args.dry_run:
-        print("[init] Disabling HPA for UPF1...")
+        print("Disabling HPA for UPF1...")
         subprocess.run(
             ["kubectl", "delete", "hpa", "open5gs-upf1-pps", "-n", NAMESPACE],
             capture_output=True, text=True
         )
-        print("[init] HPA disabled. DQN is now in control.\n")
+        print("HPA disabled. DQN is now in control.\n")
     else:
-        print("[init] DRY-RUN mode — HPA not modified.\n")
+        print("DRY-RUN mode - HPA not modified.\n")
 
     # Control loop
     step = 0
@@ -472,9 +480,9 @@ Log:        {os.path.basename(args.log):<35s}
 
             # 4. Compute desired replicas
             desired = current_replicas
-            if action == 0:  # scale_down
+            if action == 0:  # scale down
                 desired = max(1, current_replicas - 1)
-            elif action == 2:  # scale_up
+            elif action == 2:  # scale up
                 desired = min(args.max_replicas, current_replicas + 1)
 
             # 5. Apply with cooldown

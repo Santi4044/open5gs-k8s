@@ -12,7 +12,7 @@ import glob
 import os
 
 # Auto-find the latest DQN experiment folder that has the training curve CSV
-folders = sorted(glob.glob("results/*-dqn-experiment"), reverse=True)
+folders = sorted(glob.glob("results/*-dqn-training") + glob.glob("results/*-dqn-experiment"), reverse=True)
 CSV = None
 OUT_DIR = None
 for folder in folders:

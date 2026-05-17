@@ -1,8 +1,0 @@
-ts_iso,pps_actual,current_replicas,desired_replicas,dqn_action,scale_executed
-2026-05-16T23:50:21+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:26+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:31+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:36+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:41+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:46+00:00,0.0,1,1,hold,False
-2026-05-16T23:50:51+00:00,0.0,1,1,hold,False
