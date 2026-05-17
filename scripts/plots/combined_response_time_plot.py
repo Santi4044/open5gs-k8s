@@ -94,7 +94,7 @@ if __name__ == "__main__":
     dqn_df   = add_elapsed_and_rt(load_dqn())
 
     fig, ax = plt.subplots(figsize=(12, 5))
-    fig.suptitle("Estimated Response Time — Autoscaling Comparison",
+    fig.suptitle("Estimated Response Time - Autoscaling Comparison",
                  fontsize=14, fontweight="bold")
 
     # No autoscaling baseline (from HPA data, fixed 1 pod)
