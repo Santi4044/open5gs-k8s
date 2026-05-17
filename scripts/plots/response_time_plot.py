@@ -113,7 +113,7 @@ def plot_response_time(df, title, out_path, phases, pps_col="pps_actual"):
     print(f"  [{title}] max replicas: {max_replicas}")
 
     fig, ax = plt.subplots(figsize=(12, 5))
-    fig.suptitle(f"Estimated Response Time — {title}", fontsize=14, fontweight="bold")
+    fig.suptitle(f"Estimated Response Time - {title}", fontsize=14, fontweight="bold")
 
     # Plot one line for each pod count
     for c in range(1, max_replicas + 1):
