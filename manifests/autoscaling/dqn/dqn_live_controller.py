@@ -46,7 +46,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-#Constants
+# Constants
 PROM_URL = os.environ.get(
     "PROM_URL",
     "http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
@@ -65,7 +65,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-#DQN Model & Agent (self-contained, mirrors dqn_predictor.py)
+# DQN Model & Agent
 class UPFScalingEnv:
     """Simulated UPF scaling environment for offline training."""
     def __init__(self, pps_series, threshold=4000, min_replicas=1, max_replicas=5):
@@ -214,7 +214,7 @@ class DQNAgent:
             print(f"  [model] Loaded weights from {path}")
 
 
-#Training
+# Training
 def load_training_data(csv_path):
     """Load watcher CSV and extract PPS series."""
     df = pd.read_csv(csv_path)
@@ -425,7 +425,7 @@ Log:        {os.path.basename(args.log):<35s}
         print(f"[train] Training curve saved to {curve_path}")
 
         if args.train_only:
-            print("\n[train-only] Training complete. Exiting without starting live loop.")
+            print("\n[train] Training completed.")
             sys.exit(0)
 
     # Set epsilon to 0 for live mode (pure exploitation)
