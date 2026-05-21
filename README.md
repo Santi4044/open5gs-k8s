@@ -1,577 +1,351 @@
-# open5gs-k8s
+# 5G Core Network Autoscaling — Algorithm Performance Comparison
 
-This repository contains the necessary files and resources to deploy and operate Open5GS, an open-source 5G core network implementation. It provides Kubernetes manifest files for deploying Open5GS using microservices, an all-in-one deployment variant, and Open5GS WebUI. Additionally, there are manifest files for deploying the MongoDB database and network attachment definitions for Open5GS.
+> **Goal:** Compare three autoscaling strategies — **HPA**, **ARIMA**, and **DQN** — for the User Plane Function (UPF) of a 5G Core Network deployed on Kubernetes using [Open5GS](https://open5gs.org/) and [UERANSIM](https://github.com/aligungr/UERANSIM).
 
-For more information about Open5GS, please visit the [Open5GS GitHub repository](https://github.com/open5gs/open5gs).
-
-![Static Badge](https://img.shields.io/badge/stable-v5.0.0-green)
-![Static Badge](https://img.shields.io/badge/open5gs-v2.7.0-green)
-![Static Badge](https://img.shields.io/badge/ueransim-v3.2.6-green)
-![Static Badge](https://img.shields.io/badge/srsran-5e6f50a-green)
-![Static Badge](https://img.shields.io/badge/k8s-v1.28.2-green)
-![Static Badge](https://img.shields.io/badge/arch-x86__64%20%7C%20arm64-green)
-
+---
 
 ## Table of Contents
 
-- [open5gs-k8s](#open5gs-k8s)
-  - [Table of Contents](#table-of-contents)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Quick Lab VM with Multipass](#quick-lab-vm-with-multipass)
-- [Directory Structure](#directory-structure)
-- [Deployment](#deployment)
-  - [Step 1: Create a namespace for deploying Open5GS](#step-1-create-a-namespace-for-deploying-open5gs)
-  - [Step 2: Deploy MongoDB](#step-2-deploy-mongodb)
-    - [Deploy MongoDB with Kustomize](#deploy-mongodb-with-kustomize)
-    - [Check MongoDB Pod Status](#check-mongodb-pod-status)
-  - [3. Deploy the Network Attachment Definitions (NAD) for Multus](#3-deploy-the-network-attachment-definitions-nad-for-multus)
-    - [Apply Network Attachment Definitions](#apply-network-attachment-definitions)
-    - [Verify the Network Attachment Definitions](#verify-the-network-attachment-definitions)
-  - [4. Deploying Open5gs](#4-deploying-open5gs)
-    - [Deploy Open5GS components](#deploy-open5gs-components)
-      - [1. Standard Deployment:](#1-standard-deployment)
-      - [2. Deployment with Monarch for Monitoring:](#2-deployment-with-monarch-for-monitoring)
-    - [Check Deployment status](#check-deployment-status)
-    - [Verifying Deployment](#verifying-deployment)
-  - [5. Adding subscriber data](#5-adding-subscriber-data)
-    - [Deploy the Open5GS WebUI](#deploy-the-open5gs-webui)
-    - [Setting up the Admin Account](#setting-up-the-admin-account)
-    - [Accessing the WebUI](#accessing-the-webui)
-      - [Accessing the WebUI locally](#accessing-the-webui-locally)
-      - [Accessing the WebUI over SSH](#accessing-the-webui-over-ssh)
-    - [Adding subscribers](#adding-subscribers)
-    - [Using python scripts](#using-python-scripts)
-      - [1. Set up a virtual Environment](#1-set-up-a-virtual-environment)
-      - [2. Adding the admin account](#2-adding-the-admin-account)
-      - [3. Adding Subscriber information using the CLI](#3-adding-subscriber-information-using-the-cli)
-  - [6. Deploying the UERANSIM gNB](#6-deploying-the-ueransim-gnb)
-    - [Step 1: Deploy UERANSIM gNB](#step-1-deploy-ueransim-gnb)
-    - [Step 2: Verify the NGAP connection](#step-2-verify-the-ngap-connection)
-    - [Step 3: Check AMF logs](#step-3-check-amf-logs)
-  - [7. Deploying the UERANSIM UEs](#7-deploying-the-ueransim-ues)
-    - [Step 1: Deploy UEs](#step-1-deploy-ues)
-    - [Step 2: Verify UE deployment](#step-2-verify-ue-deployment)
-    - [Step 3: Check UE logs](#step-3-check-ue-logs)
-    - [Step 4: Conduct a ping test](#step-4-conduct-a-ping-test)
-    - [Step 5: Test Connectivity](#step-5-test-connectivity)
-    - [Step 6: Verify traffic through the 5G network](#step-6-verify-traffic-through-the-5g-network)
-  - [Utilities](#utilities)
-    - [Viewing Logs](#viewing-logs)
-    - [Accessing a Shell](#accessing-a-shell)
-- [IP Ranges](#ip-ranges)
-- [License](#license)
+1. [Project Overview](#1-project-overview)
+2. [Environment & Prerequisites](#2-environment--prerequisites)
+3. [Repository Structure](#3-repository-structure)
+4. [Algorithms Overview](#4-algorithms-overview)
+5. [Running the Experiments](#5-running-the-experiments)
+   - [HPA](#51-hpa-horizontal-pod-autoscaler)
+   - [ARIMA](#52-arima)
+   - [DQN](#53-dqn-deep-q-network)
+6. [Configuration Reference](#6-configuration-reference)
+   - [HPA Config](#61-hpa)
+   - [ARIMA Config](#62-arima)
+   - [DQN Config](#63-dqn)
+7. [Results](#7-results)
 
-## Requirements
-- Supported OS: **Ubuntu 22.04 LTS** (recommended) or Ubuntu 20.04 LTS
-- Supported CPU architectures: **x86_64** and **arm64** (tested on Apple M1/M2 hardware)
-- Minimum hardware: **2 vCPUs, 4GB RAM, 40GB disk space**
-- Kubernetes **v1.28 with Multus and OVS-CNI**: We recommend using the [testbed-automator](https://github.com/niloysh/testbed-automator) to prepare the Kubernetes cluster. This includes setting up the K8s cluster, configuring the cluster, installing various Container Network Interfaces (CNIs), configuring OVS bridges, and preparing for the deployment of the 5G Core network.
+---
 
-> [!NOTE]
-> The deployments scripts assume an Ubuntu Linux environment. macOS (including Apple Silicon) and Windows users should provision an Ubuntu VM -- Multipass is the recommended option below -- and run all commands inside that guest.
+## 1. Project Overview
 
-## Quick Start
+This project evaluates and compares three autoscaling approaches applied to the **UPF (User Plane Function)** of a 5G Core Network:
 
-After you satisfy the requirements above (including running on Ubuntu—use the Multipass VM on macOS/Windows), clone this repository and run the bundled helper to deploy the full demo stack:
+| Algorithm | Type | Description |
+|-----------|------|-------------|
+| **HPA** | Reactive | Kubernetes-native; scales based on a live PPS threshold |
+| **ARIMA** | Predictive | Time-series forecasting; predicts future PPS to scale proactively |
+| **DQN** | Reinforcement Learning | Learns an optimal scaling policy from historical traffic patterns |
+
+Each algorithm drives pod scaling for the `open5gs-upf1` deployment in the `open5gs` Kubernetes namespace. Traffic is generated via `iperf3` through UERANSIM UE pods, and metrics are scraped from **Prometheus**. All experiments follow the same traffic pattern:
+
+```
+IDLE (30s) → LOW traffic 10 Mbps (60s) → IDLE (30s) → HIGH traffic 40 Mbps (120s) → IDLE (120s)
+```
+
+---
+
+## 2. Environment & Prerequisites
+
+> This section is intentionally brief — the focus of this repo is the autoscaling comparison, not the 5G setup itself.
+
+The experiments assume a working environment with:
+
+- **Kubernetes cluster** with the `open5gs` namespace deployed (Open5GS 5G Core + UERANSIM)
+- **Prometheus** running in the `monitoring` namespace (e.g., via `kube-prometheus-stack`)
+- **Custom metrics adapter** configured so the `upf1_n3_in_pps` metric is accessible to Kubernetes HPA
+- **Python 3.x** installed locally with dependencies from `requirements.txt`
+- **kubectl** configured and pointing to your cluster
+
+To install Python dependencies for ARIMA/DQN:
 
 ```bash
-git clone https://github.com/niloysh/open5gs-k8s.git
-cd open5gs-k8s
-./deploy-all.sh
+pip install -r manifests/autoscaling/arima/requirements.txt
 ```
 
-The `deploy-all.sh` script provisions the Open5GS core, loads the sample UERANSIM (simulated) subscribers, starts the UERANSIM gNB/UE pods, and concludes with a basic connectivity test. Use `./remove-all.sh` when you need to clean up the cluster.
+> For full 5G infrastructure setup, refer to the original deployment scripts (`deploy-core.sh`, `deploy-ran.sh`) and the Kubernetes manifests under `open5gs/` and `ueransim/`.
 
-If you prefer a guided walkthrough, continue with the detailed sections below or consult the slides (`slides.pdf` or `slides.md`) for an overview.
+---
 
-## Quick Lab VM with Multipass
-If you do not already have a Linux host available, or you are on macOS/Windows and need an Ubuntu environment, you can create a disposable VM with Multipass:
-```bash
-multipass launch --name open5gs-test --cpus 4 --memory 4G --disk 40G jammy
-multipass shell open5gs-test
+## 3. Repository Structure
+
 ```
-Inside the VM, follow the [testbed-automator](https://github.com/niloysh/testbed-automator) instructions to set up the required Kubernetes, then run the Quick Start commands above from within that shell. Remove the VM when you are finished with `multipass delete --purge open5gs-test`.
-
-## Directory Structure
-
-The repository is organized as follows:
-
-- `open5gs/`: Contains Kubernetes manifest files for deploying open5gs using a microservices architecture.
-- `open5gs-webui/`: Contains Kubernetes manifest files for deploying the open5gs WebUI.
-- `mongodb/`: Contains Kubernetes manifest files for deploying the MongoDB database, which is a prerequisite for deploying open5gs.
-- `networks5g/`: Contains network attachment definitions for open5gs. 
-- `ueransim/`: Contains Kubernetes files for running UERANSIM-based simulated gNB and UEs.
-- `data/`: Contains slice and subscriber configuration data.
-- `mongo-tools/`: Contains python scripts for adding/removing subscription data and automating generation of configuration files for multi-slice deployments.
-- `msd`: Multi-slice deployment of open5gs and ueransim, with configurable number of slices.
-
-## Deployment
-
-Follow these steps to deploy Open5GS on a Kubernetes cluster configured with [testbed-automator](https://github.com/niloysh/testbed-automator).
-
-> [!NOTE]
-> The testbed-automator defaults to a single-node cluster setup. However, if you prefer a multi-node cluster, follow the instructions for  [multi-node deployment](https://github.com/niloysh/testbed-automator?tab=readme-ov-file#multi-node-deployment). The steps below are compatible with both single-node and multi-node setups without any additional modifications.
-
-## Step 1: Create a namespace for deploying Open5GS
-We will create a namespace for deploying all Open5GS components.
-
-```bash
-kubectl create namespace open5gs
-```
-You can verify the creation of namespace as follows.
-```bash
-kubectl get namespaces
-```
-
-## Step 2: Deploy MongoDB
-MongoDB is used for storing subscriber information, NF profile information etc.
-MongoDB is also used in interacting with the Open5GS WebUI.
-
-**Note**: We will use [Kustomize](https://kustomize.io/), a Kubernetes-native configuration management tool. Kustomize enables you to customize Kubernetes manifest files without modifying the original YAML files directly, making it easier to manage deployments across different environments.
-
-### Deploy MongoDB with Kustomize
-
-
-```bash
-kubectl apply -k mongodb -n open5gs
-```
-This command applies the MongoDB configuration using Kustomize, deploying MongoDB within the open5gs namespace. The manifests in this directory define the necessary resources for MongoDB, including StatefulSets, Services, and Persistent Volume Claims (PVCs), ensuring data persistence.
-
-### Check MongoDB Pod Status
-
-Once you’ve deployed MongoDB, check the status of the MongoDB pod to ensure it’s up and running. It may take a few moments for the pod to initialize, create the necessary volumes, and enter the READY state.
-```bash
-kubectl get pods -n open5gs
-
-NAME        READY   STATUS    RESTARTS   AGE
-mongodb-0   1/1     Running   0          42s
+open5gs-k8s/
+│
+├── manifests/
+│   ├── autoscaling/
+│   │   ├── hpa-upf1-pps.yaml          # HPA manifest for UPF1
+│   │   ├── hpa-upf2-pps.yaml          # HPA manifest for UPF2
+│   │   ├── arima/
+│   │   │   ├── arima_live_controller.py   # ARIMA control loop
+│   │   │   └── requirements.txt           # Python deps for ARIMA
+│   │   └── dqn/
+│   │       ├── dqn_live_controller.py     # DQN control loop (train + live)
+│   │       ├── dqn_model.pth              # Pre-trained DQN model weights
+│   │       └── training_data/             # CSV files used for offline training
+│   ├── monitoring/                    # Prometheus / Grafana manifests
+│   └── custom-metrics/                # Custom metrics adapter config
+│
+├── scripts/
+│   ├── traffic/
+│   │   ├── run_hpa_experiment.sh          # Run full HPA experiment
+│   │   ├── run_arima_live_experiment.sh   # Run full ARIMA experiment
+│   │   ├── run_dqn_live_experiment.sh     # Run full DQN experiment
+│   │   ├── run_dqn_training.sh            # Offline DQN training
+│   │   ├── run_collect_training_data.sh   # Collect DQN training data
+│   │   ├── run_iperf_udp.sh               # Single iperf3 UDP burst
+│   │   ├── run_pattern{1,2,3}.sh          # Traffic patterns for training
+│   │   └── watch_scaling_prom.sh          # Prometheus metric watcher (CSV)
+│   └── plots/                         # Plot generation scripts
+│
+├── results/                           # Experiment output (auto-created per run)
+│   ├── <timestamp>-hpa-experiment/
+│   ├── <timestamp>-arima-experiment/
+│   ├── <timestamp>-dqn-experiment/
+│   ├── <timestamp>-dqn-training/
+│   └── *.png                          # Comparison plots
+│
+├── open5gs/                           # Open5GS K8s manifests
+├── ueransim/                          # UERANSIM K8s manifests
+├── deploy-core.sh                     # Deploy 5G core
+├── deploy-ran.sh                      # Deploy RAN (UERANSIM)
+└── requirements.txt                   # Python deps for utility scripts
 ```
 
-If the status shows as Running, MongoDB is ready, and you can proceed to the next step. If not, use the following command to view logs and troubleshoot potential issues:
-```
-kubectl logs mongodb-0 -n open5gs
-```
+---
 
-## 3. Deploy the Network Attachment Definitions (NAD) for Multus
-Network Attachment Definitions (NADs) enable secondary network interfaces for pods in Kubernetes using the Multus CNI plugin. For Open5GS, these secondary interfaces are critical, allowing components such as the User Plane Function (UPF) and Session Management Function (SMF) to connect to distinct network segments. This configuration leverages Open Virtual Switch (OVS) with OVS-CNI to create and manage virtual networks for Open5GS components.
+## 4. Algorithms Overview
 
-In this deployment, NADs are set up to link specific interfaces to preconfigured OVS bridges (n2, n3, and n4), which should already be established by the testbed-automator. These OVS bridges represent logical networks for the N2, N3, and N4 interfaces as follows:
+### 4.1 HPA — Horizontal Pod Autoscaler
 
-- N2: Control plane traffic between gNB and AMF.
-- N3: User data traffic between gNB and UPF.
-- N4: Control plane traffic between SMF and UPF.
+Kubernetes' built-in autoscaler. It watches the **`upf1_n3_in_pps`** custom metric (packets per second ingested by UPF1's N3 interface, served via a custom metrics adapter from Prometheus) and scales the deployment reactively when the metric crosses the configured threshold.
 
-> [!NOTE]
-> You can verify the existence of the n2, n3, and n4 ovs bridges using the commands `sudo ovs-vsctl show`
+- **Pros:** Zero extra components, native K8s, no training required
+- **Cons:** Purely reactive — always one step behind traffic spikes
 
+### 4.2 ARIMA — AutoRegressive Integrated Moving Average
 
-### Apply Network Attachment Definitions
-To deploy the NADs, apply the Kubernetes manifest files in the networks5g/ directory:
-```bash
-kubectl apply -k networks5g -n open5gs
-```
-This command will create three NADs (one each for n2, n3, and n4), allowing the UPF, SMF, and other Open5GS components to connect to these logical networks.
+A Python control loop (`arima_live_controller.py`) that:
+1. Queries Prometheus every `--interval` seconds for the current PPS
+2. Maintains a **sliding window** of PPS history
+3. Fits an **ARIMA(p,d,q)** model on the window and forecasts `--horizon` steps ahead
+4. Computes desired replicas from the forecasted PPS value
+5. Calls `kubectl scale` if a change is needed (respecting a cooldown)
+6. Disables HPA while running, and re-enables it on exit
 
-### Verify the Network Attachment Definitions
-To confirm that the NADs are set up correctly, run the following command:
-```bash
-kubectl get network-attachment-definition -n open5gs
+- **Pros:** Proactive — acts before the spike hits
+- **Cons:** Sensitive to non-stationary or abrupt traffic changes; ARIMA order needs tuning
 
-NAME        AGE
-n2network   10s
-n3network   10s
-n4network   10s
-```
-You should see output similar to the above. These definitions will now allow specific Open5GS pods to use secondary network interfaces connected to the corresponding OVS bridges, enabling proper segmentation and routing of control and user plane traffic in the 5G core network.
+### 4.3 DQN — Deep Q-Network
 
+A reinforcement learning controller (`dqn_live_controller.py`) that:
+1. Learns a scaling **policy** from historical traffic data (offline training)
+2. At runtime, observes the current PPS + replica state and selects an action (scale up / hold / scale down)
+3. Uses a neural network (Q-network) to estimate action values
+4. Ships with a **pre-trained model** (`dqn_model.pth`) so you can skip training
 
-## 4. Deploying Open5gs
-The Open5GS deployment uses a microservices architecture to run each network function (NF) in separate containers as Kubernetes pods, providing flexibility and scalability. This setup allows for easy management and scaling of individual NFs, such as the AMF (Access and Mobility Management Function), SMF (Session Management Function), and UPF (User Plane Function), according to specific requirements.
+- **Pros:** Can generalise across complex traffic patterns; improves with more data
+- **Cons:** Requires training data collection; less interpretable than ARIMA or HPA
 
-In this deployment, Open5GS is configured to support two network slices. Each slice has its own dedicated instance of the SMF and UPF to handle slice-specific user and control plane traffic, while other NFs, like the AMF, are shared across slices.
+---
 
-### Deploy Open5GS components
-To deploy Open5GS, apply the Kubernetes manifest files in the open5gs/ directory. These manifest files define each Open5GS NF as a separate pod, allowing the platform to operate in a distributed fashion.
+## 5. Running the Experiments
 
-Select one of the following deployment options based on your monitoring needs - **Standard Deployment** or **Deployment with Monarch**.
+All experiment scripts are run from the **repo root**. Each one follows the same traffic phases and saves timestamped output to `results/`.
 
-> [!WARNING]
-> Deploy only one option at a time.
+### 5.1 HPA — Horizontal Pod Autoscaler
 
-> [!NOTE]
-> To switch deployments (e.g., from Standard to Monarch), first delete the current deployment with
-> `kubectl delete -k open5gs -n open5gs`. Then proceed with the other deployment option.
-
-#### 1. Standard Deployment:
-Deploys Open5GS network functions as separate pods for a distributed setup.
-```bash
-kubectl apply -k open5gs -n open5gs
-```
-
-#### 2. Deployment with Monarch for Monitoring:
-[Monarch](https://github.com/niloysh/5g-monarch) is a network slice monitoring architecture for cloud native 5G network deployments.
-
-This deployment option adds monitoring capabilities with Monarch for enhanced metrics tracking. Use this command instead of the standard deployment command.
+**Step 1:** Apply the HPA manifest.
 
 ```bash
-kubectl apply -k msd/overlays/open5gs-metrics -n open5gs
+kubectl apply -f manifests/autoscaling/hpa-upf1-pps.yaml
 ```
 
-
-This command will create pods for each Open5GS NF, including AMF, SMF, UPF, and additional components needed for 5G core functionality.
-
-> [!NOTE]
-> Starting the network functions (NFs) may take some time as dependencies are resolved, so they may initialize sequentially. Please allow time for each NF to start up fully.
-
-### Check Deployment status
-After deploying Open5GS, you can monitor the status of the pods to ensure they have all reached the Running state. Run the following command to check the status of all Open5GS pods:
-```bash
-kubectl get pods -n open5gs
-```
-You should see output similar to
-
-![open5gs-running](images/open5gs-running.png)
-
-Each NF pod should display the status Running. The SMF and UPF pods have been duplicated for each slice, as specified in the default configuration.
-
-### Verifying Deployment
-
-If any pods are not in the Running state, check the logs for troubleshooting:
-```bash
-kubectl logs <pod-name> -n open5gs
-```
-
-For example, on successfully running the AMF, you can check its logs as follows
-```bash
-kubectl logs open5gs-amf-d965784c4-688nv -n open5gs
-```
-You should see output similar to
-```bash
-Defaulted container "amf" out of: amf, wait-scp (init)
-Open5GS daemon v2.7.0
-
-10/30 21:23:03.616: [app] INFO: Configuration: '/open5gs/config/amfcfg.yaml' (../lib/app/ogs-init.c:130)
-10/30 21:23:03.616: [app] INFO: File Logging: '/open5gs/install/var/log/open5gs/amf.log' (../lib/app/ogs-init.c:133)
-10/30 21:23:03.619: [metrics] INFO: metrics_server() [http://0.0.0.0]:9090 (../lib/metrics/prometheus/context.c:299)
-10/30 21:23:03.619: [sbi] INFO: NF Service [namf-comm] (../lib/sbi/context.c:1812)
-10/30 21:23:03.620: [sbi] INFO: nghttp2_server() [http://10.244.0.35]:80 (../lib/sbi/nghttp2-server.c:414)
-10/30 21:23:03.636: [amf] INFO: ngap_server() [10.10.3.200]:38412 (../src/amf/ngap-sctp.c:61)
-10/30 21:23:03.636: [sctp] INFO: AMF initialize...done (../src/amf/app.c:33)
-10/30 21:23:03.638: [sbi] INFO: [25c6ae14-9705-41ef-be93-9b9213babecb] NF registered [Heartbeat:10s] (../lib/sbi/nf-sm.c:221)
-10/30 21:23:03.638: [sbi] INFO: [25c9bf96-9705-41ef-a6a1-afd4bf0905fe] Subscription created until 2024-10-31T21:23:03.638420+00:00 [duration:86400,validity:86399.999431,patch:43199.999715] (../lib/sbi/nnrf-handler.c:708)
-```
-
-## 5. Adding subscriber data
-
-With the core network now up and running, we need to add subscriber data to enable connectivity. Open5GS provides a WebUI for adding and managing subscriber information. The WebUI can be accessed after deploying it with the Kubernetes manifest files in the open5gs-webui/ directory. Once deployed, it will be accessible at http://<node_ip>:30300.
-
-### Deploy the Open5GS WebUI
-Apply the Kubernetes manifest files from the open5gs-webui/ directory to deploy the WebUI.
-```bash
-kubectl apply -k open5gs-webui -n open5gs
-```
-### Setting up the Admin Account
-
-> [!IMPORTANT]  
-> Before accessing the WebUI, an admin account must be created. 
-
-
-You can use the add-admin-account.py Python script located in mongo-tools/ to add the default admin account. This script simplifies setup by configuring the initial admin credentials directly in MongoDB. See [Adding the admin account](#2-adding-the-admin-account) section.
-
-For detailed instructions on using this script, see the [Using Python Scripts](#using-python-scripts) section below.
-
-### Accessing the WebUI
-
-#### Accessing the WebUI locally
-Once deployed, the Open5GS WebUI will run on port 30300 on the node where Open5GS is installed. To access it:
-
-1.	Open a web browser.
-2.	Navigate to http://<node_ip>:30300 (replace <node_ip> with the actual IP address of your deployment node).
-
-Here, you can manage subscribers, view network statistics, and configure network functions as needed.
-
-After adding the admin account, log in with:
-
-- Username: `admin`
-- Password: `1423`
-
-> [!NOTE]
->  If you’re unable to log in, verify that the admin account was added by running the add-admin-account.py script, as outlined in the previous steps.
-
-#### Accessing the WebUI over SSH
-If you're accessing the Open5GS host remotely over SSH, you’ll need to forward the WebUI port to your local machine to access it in a browser.
-
-To set up SSH port forwarding, run the following command on your local machine:
-```bash
-ssh -p 2222 -L 30300:127.0.0.1:30300 dev@127.0.0.1
-```
-Here:
-- -p 2222 specifies the SSH port used for connecting to the node.
-- -L 30300:127.0.0.1:30300 forwards your local port 30300 to port 30300 on the Open5GS node.
-
-This SSH tunnel will redirect requests from your local port 30300 to port 30300 on the remote node, allowing access to the WebUI as though it were running locally.
-
-Once connected, open your web browser and go to http://localhost:30300 to access the Open5GS WebUI.
-
-You can add subscriber information such as IMSI, Subscriber Key, Operator Key, SNSSAI etc using the WebUI as shown below.
-
-![open5gs-webui](images/open5gs-webui.png)
-
-### Adding subscribers
-Once you can access the WebUI, you can add the subscriber information. For testing with UERANSIM, you should add the subscriber information found in [data/sample-subscribers.md](data/sample-subscribers.md).
-
-There are 3 sample subscribers configured to connect to two slices.
-
-   
-### Using python scripts
-Python scripts are available in this project to help automate the management of subscriber data and simplify multi-slice configuration. These scripts can add, remove, and manage subscriber entries in the MongoDB database that Open5GS relies on. They can also generate necessary configuration files for multi-slice deployments.
-
-#### 1. Set up a virtual Environment
-First, set up a Python virtual environment to manage dependencies.
+**Step 2:** Run the experiment.
 
 ```bash
-sudo apt-get install python3-pip
-sudo pip3 install virtualenv
-virtualenv venv
-source venv/bin/activate
-pip install -r requirements.txt
+bash scripts/traffic/run_hpa_experiment.sh
 ```
 
-Once you have activated the virtual environment, you should see your terminal prompt display the venv as shown below:
-```bash
-(venv) dev@workshop-vm:~/open5gs-k8s$ 
-```
-This means your virtual environment is activated and now your can use the python scripts.
+This script:
+- Starts a Prometheus metric watcher in the background (saves `watch.csv`)
+- Runs the traffic phases via `iperf3` through the UE pod
+- Saves results to `results/<timestamp>-hpa-experiment/`
 
-#### 2. Adding the admin account
-Before accessing the WebUI, an admin account must be set up. To do this, use the add-admin-account.py Python script in the mongo-tools/ directory, which will automatically add a default admin account to the MongoDB database.
-
-Run the script as follows:
+**Optional — override parameters via environment variables:**
 
 ```bash
-python mongo-tools/add-admin-account.py
-```
-You should see an output similar to this, confirming the account creation:
-```bash
-2024-10-30 17:38:07 |     INFO | No accounts found. Adding admin account.
+LOW_RATE=20M PEAK_RATE=60M PEAK_DUR=180 bash scripts/traffic/run_hpa_experiment.sh
 ```
 
-You can now go back to [Accessing the WebUI](#accessing-the-open5gs-webui) to add subscriber information.
+---
 
-Alternatively, you can also [add subscriber data from the command line](#3-adding-subscriber-information-using-the-cli). This may be particularly useful for batch operations or automated setups.
+### 5.2 ARIMA
 
-#### 3. Adding Subscriber information using the CLI
-
-The python scripts can be used to add subscriber information. For details see [Add subscribers using CLI](add-subscribers-using-cli.md).
-
-## 6. Deploying the UERANSIM gNB
-Once the subscriber data is correctly inserted, we can move on to deploying the RAN.
-UERANSIM can be used to deploy a simulated monolithic gNB.
-
-### Step 1: Deploy UERANSIM gNB
-
-The `ueransim` directory contains Kubernetes manifest files for both gNB and UEs. First, deploy UERANSIM gNB using `ueransim/ueransim-gnb` directory and wait for NGAP connection to succeed. 
+> Make sure the HPA is **not** applied before running this. The ARIMA controller disables it automatically, but it's cleaner to start without it.
 
 ```bash
-kubectl apply -k ueransim/ueransim-gnb/ -n open5gs
+kubectl delete hpa open5gs-upf1-pps -n open5gs --ignore-not-found
 ```
 
-### Step 2: Verify the NGAP connection
-
-Verify that the NGAP connection is succesful from the gNB logs.
-```bash
-kubectl logs ueransim-gnb-<pod-name> -n open5gs
-```
-> [!NOTE] 
-> Replace <pod-name> with the actual name of the gNB pod, which can be obtained by running kubectl get pods -n open5gs.
-
-> [!TIP]
-> Check out the section on [Utilities](#utilities) for a more convenient way to check logs.
-
-You should see output indicating that the SCTP connection is established and the NG Setup procedure is successful, similar to the following:
-```bash
-UERANSIM v3.2.6
-[2024-10-31 16:18:35.073] [sctp] [info] Trying to establish SCTP connection... (10.10.3.200:38412)
-[2024-10-31 16:18:35.075] [sctp] [info] SCTP connection established (10.10.3.200:38412)
-[2024-10-31 16:18:35.075] [sctp] [debug] SCTP association setup ascId[4549]
-[2024-10-31 16:18:35.075] [ngap] [debug] Sending NG Setup Request
-[2024-10-31 16:18:35.082] [ngap] [debug] NG Setup Response received
-[2024-10-31 16:18:35.082] [ngap] [info] NG Setup procedure is successful
-```
-### Step 3: Check AMF logs
-
-We should also be able to see the logs from the AMF indicating a successful NGAP connection with the gNB.
+**Run the experiment:**
 
 ```bash
-kubectl logs -f open5gs-amf-d965784c4-cxvgt -n open5gs
-```
-You should see log entries indicating the successful registration of the gNB, such as:
-```bash
-10/31 18:06:17.538: [sbi] INFO: (NRF-notify) NF registered [d3371fa4-97b2-41ef-acbb-55f392fb7b64:1] (../lib/sbi/nnrf-handler.c:924)
-10/31 18:06:17.538: [sbi] INFO: [NSSF] (NRF-notify) NF Profile updated [d3371fa4-97b2-41ef-acbb-55f392fb7b64:1] (../lib/sbi/nnrf-handler.c:938)
-10/31 18:10:50.260: [amf] INFO: gNB-N2 accepted[10.10.3.231]:53505 in ng-path module (../src/amf/ngap-sctp.c:113)
-10/31 18:10:50.260: [amf] INFO: gNB-N2 accepted[10.10.3.231] in master_sm module (../src/amf/amf-sm.c:741)
-10/31 18:10:50.273: [amf] INFO: [Added] Number of gNBs is now 1 (../src/amf/context.c:1231)
-10/31 18:10:50.273: [amf] INFO: gNB-N2[10.10.3.231] max_num_of_ostreams : 10 (../src/amf/amf-sm.c:780)
+bash scripts/traffic/run_arima_live_experiment.sh
 ```
 
+This script:
+- Starts `arima_live_controller.py` with default parameters in the background
+- Runs the same traffic phases as the HPA experiment
+- Saves `arima_live.csv` (per-step decisions) and `traffic.log` to `results/<timestamp>-arima-experiment/`
+- Stops the controller and **re-applies the HPA** on exit
 
-
-## 7. Deploying the UERANSIM UEs
-
-Now that the gNB is deployed, we can proceed to deploy UERANSIM UEs using `ueransim/ueransim-ue/` directory.
-
-### Step 1: Deploy UEs
+**Run the controller manually with custom parameters:**
 
 ```bash
-kubectl apply -k ueransim/ueransim-ue -n open5gs
+python manifests/autoscaling/arima/arima_live_controller.py \
+  --interval 5 \
+  --threshold 1500 \
+  --horizon 3 \
+  --order 2 1 2 \
+  --window 30 \
+  --min-window 10 \
+  --cooldown 30 \
+  --log results/my-arima-run/arima_live.csv
 ```
-This will deploy 2 simulated UEs, ue1 and ue2 which connects to our 2 network slices.
 
-### Step 2: Verify UE deployment
-You can verify that the UEs have been deployed by the `kubectl get pods -n open5gs` command. You should see output similar to the one below, indicating that the simulated UEs have been deployed.
+---
+
+### 5.3 DQN — Deep Q-Network
+
+The DQN workflow has three stages: **collect training data → train → run live experiment**. A pre-trained model (`dqn_model.pth`) is included so you can skip straight to Step 3 if desired.
+
+**Step 1 (optional): Collect training data**
 
 ```bash
-ueransim-ue1-6df4cb95b-nq2m5     1/1     Running   0              6s
-ueransim-ue2-6d5cc8487-58fvf     1/1     Running   0              6s
+bash scripts/traffic/run_collect_training_data.sh
 ```
 
-### Step 3: Check UE logs
+Runs three traffic patterns and saves CSVs to `manifests/autoscaling/dqn/training_data/`.
 
-The UEs should now connect to the gNB and establish a PDU session with the 5G core network. To verify this, check the logs of ue1:
-```bash
-kubectl logs ueransim-ue1-<pod-id> -n open5gs
-```
-You should see logs similar to the following, indicating successful PDU session establishment:
+**Step 2 (optional): Train the DQN model**
 
 ```bash
-[2024-10-31 18:18:44.062] [nas] [debug] Sending PDU Session Establishment Request
-[2024-10-31 18:18:44.062] [nas] [debug] UAC access attempt is allowed for identity[0], category[MO_sig]
-[2024-10-31 18:18:44.267] [nas] [debug] Configuration Update Command received
-[2024-10-31 18:18:44.293] [nas] [debug] PDU Session Establishment Accept received
-[2024-10-31 18:18:44.293] [nas] [info] PDU Session establishment is successful PSI[1]
-[2024-10-31 18:18:44.319] [app] [info] Connection setup for PDU session[1] is successful, TUN interface[uesimtun0, 10.41.0.2] is up.
+bash scripts/traffic/run_dqn_training.sh
 ```
 
-### Step 4: Conduct a ping test
+Trains from the collected CSVs and saves the model to `manifests/autoscaling/dqn/dqn_model.pth`, overwriting the existing one.
 
-Once the PDU session is established, we can conduct a ping test from the UEs. We can open up a shell on the ue1 pod as shown.
+**Step 3: Run the live experiment**
 
 ```bash
-kubectl exec -it ueransim-ue1-<pod-id> -n open5gs -- /bin/bash
-
-root@ueransim-ue1-6df4cb95b-nq2m5:/ueransim# 
+bash scripts/traffic/run_dqn_live_experiment.sh
 ```
 
-Once inside the pod, we can look at the interfaces as follows:
+This script:
+- Starts a local `iperf3` server
+- Loads the pre-trained model and starts `dqn_live_controller.py` in the background
+- Runs the same traffic phases (IDLE → LOW → IDLE → HIGH → IDLE)
+- Saves `dqn_live.csv` to `results/<timestamp>-dqn-experiment/`
+
+**Run the controller manually:**
 
 ```bash
-ip a
-```
-You should see the interfaces similar to the one below:
-```bash
-root@ueransim-ue1-6df4cb95b-nq2m5:/ueransim# ip a
-3: uesimtun0: <POINTOPOINT,PROMISC,NOTRAILERS,UP,LOWER_UP> mtu 1400 qdisc fq_codel state UNKNOWN group default qlen 500
-    link/none 
-    inet 10.41.0.2/32 scope global uesimtun0
-       valid_lft forever preferred_lft forever
-    inet6 fe80::917c:fa60:d6ea:9ddc/64 scope link stable-privacy 
-       valid_lft forever preferred_lft forever
+python manifests/autoscaling/dqn/dqn_live_controller.py \
+  --interval 5 \
+  --threshold 1500 \
+  --cooldown 30 \
+  --load-model manifests/autoscaling/dqn/dqn_model.pth \
+  --log results/my-dqn-run/dqn_live.csv
 ```
 
-Note that a tunnel interface `uesimtun0` has been created denoting the UE's connection to the 5G network, with an IP in the range `10.41.0.0/16` If using a COTS UE, this would be the IP assigned to the UE. This IP range is specified in our core configuration, in the [SMF config file](open5gs/slices/slice1/smf1/smf-configmap.yaml#L45).
+---
 
-### Step 5: Test Connectivity
+## 6. Configuration Reference
 
-Let's test this by sending pings to google.ca using the `uesimtun0` interface.
+### 6.1 HPA
 
-```bash
-ping -I uesimtun0 www.google.ca 
+**File:** `manifests/autoscaling/hpa-upf1-pps.yaml`
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `spec.minReplicas` | `1` | Minimum UPF1 replicas |
+| `spec.maxReplicas` | `5` | Maximum UPF1 replicas |
+| `metrics[].external.target.value` | `"1500"` | PPS threshold per replica — scale up when exceeded |
+| `behavior.scaleUp.stabilizationWindowSeconds` | `0` | No delay on scale-up |
+| `behavior.scaleDown.stabilizationWindowSeconds` | `0` | No delay on scale-down |
+| `behavior.*.policies[].periodSeconds` | `30` | Cooldown period between scaling events |
+
+Edit the file and re-apply with `kubectl apply -f manifests/autoscaling/hpa-upf1-pps.yaml`.
+
+---
+
+### 6.2 ARIMA
+
+**File:** `manifests/autoscaling/arima/arima_live_controller.py`
+
+All parameters are exposed as CLI arguments:
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--threshold` | `1500` | PPS per replica — used to convert forecasted PPS to replica count |
+| `--interval` | `5` | Control loop frequency (seconds) |
+| `--horizon` | `3` | ARIMA forecast horizon (number of steps ahead) |
+| `--order P D Q` | `2 1 2` | ARIMA(p,d,q) order |
+| `--window` | `30` | Sliding window size (number of samples) |
+| `--min-window` | `10` | Minimum samples before ARIMA activates (uses current PPS before this) |
+| `--max-replicas` | `5` | Maximum replicas the controller will request |
+| `--cooldown` | `30` | Seconds to wait between consecutive scale actions |
+| `--log` | *(path)* | CSV file path for decision log |
+| `--dry-run` | off | Log decisions without actually scaling |
+
+To tune the ARIMA model, adjust `--order`, `--window`, and `--horizon`. Larger windows give a smoother fit; a higher horizon makes the controller more proactive but also more sensitive to forecast error.
+
+---
+
+### 6.3 DQN
+
+**File:** `manifests/autoscaling/dqn/dqn_live_controller.py`
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--threshold` | `1500` | PPS per replica (same meaning as ARIMA/HPA) |
+| `--interval` | `5` | Control loop frequency (seconds) |
+| `--cooldown` | `30` | Seconds between scale actions |
+| `--load-model` | *(path)* | Path to pre-trained `.pth` model weights |
+| `--save-model` | *(path)* | Where to save a newly trained model |
+| `--train-dir` | *(path)* | Directory of training CSVs (used with `--train-only`) |
+| `--train-only` | off | Run offline training then exit (no live control loop) |
+| `--log` | *(path)* | CSV file path for decision log |
+
+**Pre-trained model:** `manifests/autoscaling/dqn/dqn_model.pth`
+
+**Training data:** `manifests/autoscaling/dqn/training_data/` — CSV files produced by `run_collect_training_data.sh`.
+
+---
+
+## 7. Results
+
+Each experiment run creates a timestamped folder under `results/`:
+
 ```
-You should see output similar to the below:
-```bash
-root@ueransim-ue1-6df4cb95b-nq2m5:/ueransim# ping -I uesimtun0 www.google.ca 
-PING www.google.ca (142.251.33.163) from 10.41.0.2 uesimtun0: 56(84) bytes of data.
-64 bytes from yyz10s17-in-f3.1e100.net (142.251.33.163): icmp_seq=1 ttl=59 time=8.24 ms
-64 bytes from yyz10s17-in-f3.1e100.net (142.251.33.163): icmp_seq=2 ttl=59 time=6.19 ms
-64 bytes from yyz10s17-in-f3.1e100.net (142.251.33.163): icmp_seq=3 ttl=59 time=7.66 ms
+results/
+├── <timestamp>-hpa-experiment/
+│   ├── watch.csv        # time-series: PPS, replicas
+│   └── traffic.log      # iperf3 output per phase
+├── <timestamp>-arima-experiment/
+│   ├── arima_live.csv   # ts, pps_actual, pps_forecast, replicas, action
+│   └── traffic.log
+└── <timestamp>-dqn-experiment/
+    └── dqn_live.csv     # ts, pps, replicas, action, reward
 ```
 
-### Step 6: Verify traffic through the 5G network
-To verify that the pings are indeed going through the 5G network, leave the pings running, open up a new terminal, and we can open up a shell on the UPF1 pod (recall that ue1 is connected to slice1, and slice1 has upf1) as follows:
+Pre-generated comparison plots are stored directly in `results/`:
 
-```bash
-kubectl exec -it open5gs-upf1-866d8bb994-5bj4x -n open5gs -- /bin/bash
-```
-Once inside the container, we can check the interfaces using `ip a` and see the following:
+| Plot | Description |
+|------|-------------|
+| `results/combined_response_time.png` | Response time over time for all three algorithms |
+| `results/rt_vs_request_rate.png` | Response time vs. request rate comparison |
 
-```bash
-root@open5gs-upf1-866d8bb994-5bj4x:/open5gs/install/bin# ip a
-5: ogstun: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 500
-    link/none 
-    inet 10.41.0.1/16 scope global ogstun
-       valid_lft forever preferred_lft forever
-```
+To regenerate plots, use the scripts in `scripts/plots/`.
 
-Note that a tunnel interface has been created in the UPF as well representing the GTP-U tunnel endpoint of the N3 interface.
-
-We can capture packets on this interface using `tcpdump` as follows:
-
-```bash
-tcpdump -i ogstun
-```
-
-You should see ping traffic appearing as follows:
-```bash
-root@open5gs-upf1-866d8bb994-5bj4x:/open5gs/install/bin# tcpdump -i ogstun 
-tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
-listening on ogstun, link-type RAW (Raw IP), snapshot length 262144 bytes
-18:34:29.550600 IP vpn-uw-ft-10-41-0-2.campus-dynamic.uwaterloo.ca > yyz10s17-in-f3.1e100.net: ICMP echo request, id 48, seq 212, length 64
-18:34:29.556545 IP yyz10s17-in-f3.1e100.net > vpn-uw-ft-10-41-0-2.campus-dynamic.uwaterloo.ca: ICMP echo reply, id 48, seq 212, length 64
-18:34:30.552845 IP vpn-uw-ft-10-41-0-2.campus-dynamic.uwaterloo.ca > yyz10s17-in-f3.1e100.net: ICMP echo request, id 48, seq 213, length 64
-18:34:30.558190 IP yyz10s17-in-f3.1e100.net > vpn-uw-ft-10-41-0-2.campus-dynamic.uwaterloo.ca: ICMP echo reply, id 48, seq 213, length 64
-```
-
-Congratulations! You have setup a 5G network and simulated RAN and UEs and sent traffic through the network.
-
-
-
-## Utilities
-The `bin` directory contains utility scripts designed for convenient log viewing and accessing a shell for any network function (NF). 
-
-### Viewing Logs
-To view the logs of a specific NF, use the following command:
-```bash
-./bin/k8s-log.sh <nf> <namespace>
-```
-**Example:**
-```bash
-./bin/k8s-log.sh amf open5gs
-```
-
-### Accessing a Shell
-To open a shell session in any NF, use:
-```bash
-./bin/k8s-shell.sh <nf> <namespace>
-```
-**Example:**
-```bash
-./bin/k8s-shell.sh upf1 open5gs
-```
-
-## IP Ranges
-This project uses overlay IPs for tunnels deployed with the OVS-CNI in Kubernetes. The CNI configuration is outlined in the `networks5g/`. 
-
-- `n2network` as IP `10.10.2.0/24`, `n3network` has IP `10.10.3.0/24`, `n4network` has IP `10.10.4.0/24`.
-- Due to constraints in srsRAN, both AMF and gNB currently utilize the `n3network` instead of `n2network`.
-- UPF N3 IP range is from `10.10.3.X` from `UPFX`. UPF N4 IP range is from `10.10.4.X` for `UPFX`.
-- SMF N4 IP range is from `10.10.4.{100 + X}` from `SMFX`
-- AMF IP range is from `10.10.3.200` to `10.10.3.230`.
-- gNB IP range is from `10.10.3.231` to `10.10.3.250`.
-
-Please use the above conventions when connecting external gNBs, e.g., srsRAN.
-
+---
 
 ## License
-This repository is licensed under the [MIT License](LICENSE).
+
+This project builds on [open5gs-k8s](https://github.com/niloysh/open5gs-k8s) by Niloy Saha. See [LICENSE](LICENSE) for details.
