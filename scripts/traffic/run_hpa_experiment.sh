@@ -33,12 +33,12 @@ hpa_live_print() {
     replicas="${replicas:-NA}"
     pps="${pps:-NA}"
 
-    action="Hold →"
+    action="Hold"
     if [[ "$replicas" =~ ^[0-9]+$ && "$prev_replicas" =~ ^[0-9]+$ ]]; then
       if (( replicas > prev_replicas )); then
-        action="Scale Up ↑"
+        action="Scale Up"
       elif (( replicas < prev_replicas )); then
-        action="Scale Down ↓"
+        action="Scale Down"
       fi
     fi
 
@@ -53,6 +53,7 @@ HPA_PRINT_PID=$!
 
 trap 'kill $WATCH_PID $HPA_PRINT_PID 2>/dev/null || true' EXIT
 
+# Run traffic
 OUT_LOG="$OUT_LOG" scripts/traffic/run_traffic_phases.sh
 
 echo "Done. Results saved to:"
