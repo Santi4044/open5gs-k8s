@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
+# !/usr/bin/env bash
 set -euo pipefail
 
+# Traffic phase parameters
 IDLE1="${IDLE1:-30}"
 LOW_RATE="${LOW_RATE:-10M}"
 LOW_DUR="${LOW_DUR:-60}"
@@ -10,18 +11,21 @@ PEAK_DUR="${PEAK_DUR:-120}"
 IDLE3="${IDLE3:-120}"
 OUT_LOG="${OUT_LOG:-/dev/null}"
 
+# Sleep for a given duration and log the phase label
 run_idle_phase() {
   local label="$1" duration="$2"
   echo "$(date -u +%FT%T%z) === Phase: $label | dur=${duration}s ===" | tee -a "$OUT_LOG"
   sleep "$duration"
 }
 
+# Send UDP traffic via iperf3 and log the phase label
 run_traffic_phase() {
   local label="$1" bitrate="$2" duration="$3"
   echo "$(date -u +%FT%T%z) === Phase: $label | bitrate=$bitrate | dur=${duration}s ===" | tee -a "$OUT_LOG"
   BITRATE="$bitrate" DURATION="$duration" scripts/traffic/run_iperf_udp.sh 2>&1 | tee -a "$OUT_LOG"
 }
 
+# Run 5-phase traffic pattern
 run_idle_phase "1-IDLE" "$IDLE1"
 run_traffic_phase "2-LOW" "$LOW_RATE" "$LOW_DUR"
 run_idle_phase "3-IDLE" "$IDLE2"
