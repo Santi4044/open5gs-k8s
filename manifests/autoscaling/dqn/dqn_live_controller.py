@@ -332,7 +332,7 @@ def scale_deployment(desired):
 
 
 # Main
-ACTION_NAMES = {0: "scale down", 1: "hold", 2: "scale up"}
+ACTION_NAMES = {0: "Scale Down", 1: "Hold", 2: "Scale Up"}
 
 
 def main():
