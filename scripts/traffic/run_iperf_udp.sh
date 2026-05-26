@@ -37,8 +37,10 @@ fi
 # Print traffic run details
 echo "[traffic] $(date -Iseconds) UE_POD=$UE_POD -> SERVER=${SERVER_IP}:${SERVER_PORT} bitrate=${BITRATE} len=${PKT_LEN} dur=${DURATION}s" >&2
 
-# Add the DN route and run UDP traffic from the UE pod
-kubectl exec -n "$NAMESPACE_OPEN5GS" "$UE_POD" -c ue -- sh -c "
-ip route add ${DN_SUBNET} dev ${UE_TUN_IF} 2>/dev/null || true
-iperf3 -u -c ${SERVER_IP} -p ${SERVER_PORT} -b ${BITRATE} -l ${PKT_LEN} -t ${DURATION} --connect-timeout 5000 || true
-"
+# Add the DN route once
+kubectl exec -n "$NAMESPACE_OPEN5GS" "$UE_POD" -c ue -- \
+  ip route add ${DN_SUBNET} dev ${UE_TUN_IF} 2>/dev/null || true
+
+# Run UDP traffic
+kubectl exec -n "$NAMESPACE_OPEN5GS" "$UE_POD" -c ue -- \
+  iperf3 -u -c ${SERVER_IP} -p ${SERVER_PORT} -b ${BITRATE} -l ${PKT_LEN} -t ${DURATION} --connect-timeout 5000 || true
