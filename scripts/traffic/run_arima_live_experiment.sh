@@ -28,6 +28,7 @@ echo "Waiting 3s for the controller to initialise..."
 
 sleep 3
 
+# Run traffic
 OUT_LOG="$TRAFFIC_LOG" scripts/traffic/run_traffic_phases.sh
 
 # Wait before stopping the controller
