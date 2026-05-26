@@ -246,10 +246,10 @@ Log:        {os.path.basename(args.log):<35s}
 
             # 6. Print status
             step += 1
-            print(f"  [{step:>4d}] {ts} | PPS: {pps:>8.1f} | "
+            print(f"[ARIMA] {now.strftime('%H:%M:%S')} | PPS: {pps:>8.1f} | "
                   f"Forecast: {forecast_pps:>8.1f} | "
                   f"Replicas: {current_replicas} -> {desired} | "
-                  f"{action:<10s}")
+                  f"Action: {action:<10s}")
 
             elapsed = time.time() - loop_start
             time.sleep(max(0, args.interval - elapsed))
