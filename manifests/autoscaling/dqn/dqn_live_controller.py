@@ -512,9 +512,9 @@ Log:        {os.path.basename(args.log):<35s}
 
             # 7. Print status
             step += 1
-            print(f"  [{step:>4d}] {ts} | PPS: {pps:>8.1f} | "
+            print(f"[DQN]   {now.strftime('%H:%M:%S')} | PPS: {pps:>8.1f} | "
                   f"Replicas: {current_replicas} -> {desired} | "
-                  f"{action_name:<10s}")
+                  f"Action: {action_name:<10s}")
 
             prev_pps = pps
             elapsed = time.time() - loop_start
