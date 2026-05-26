@@ -29,7 +29,12 @@ hpa_live_print() {
     hpa_line="$(kubectl get hpa -n "$NAMESPACE_OPEN5GS" "$HPA_NAME" --no-headers 2>/dev/null || true)"
     replicas="$(awk '{print $6}' <<<"$hpa_line" 2>/dev/null || true)"
     targets="$(awk '{print $3}' <<<"$hpa_line" 2>/dev/null || true)"
-    pps="${targets%/*}"
+    pps_raw="${targets%/*}"
+    if [[ "$pps_raw" =~ ^([0-9]+)m$ ]]; then
+      pps=$(echo "scale=1; ${BASH_REMATCH[1]} / 1000" | bc)
+    else
+      pps="$pps_raw"
+    fi
     replicas="${replicas:-NA}"
     pps="${pps:-NA}"
 
