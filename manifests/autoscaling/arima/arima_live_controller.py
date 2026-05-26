@@ -226,12 +226,12 @@ Log:        {os.path.basename(args.log):<35s}
             desired = pps_to_replicas(forecast_pps, args.threshold, args.max_replicas)
 
             # 4. Determine action
-            action = "hold"
+            action = "Hold"
             scaled = False
             time_since_last = time.time() - last_scale_time
 
             if desired != current_replicas and time_since_last >= args.cooldown:
-                action = "scale up" if desired > current_replicas else "scale down"
+                action = "Scale Up" if desired > current_replicas else "Scale Down"
                 if not args.dry_run:
                     scaled = scale_deployment(desired)
                     if scaled:
