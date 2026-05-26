@@ -11,17 +11,25 @@ PEAK_DUR="${PEAK_DUR:-120}"
 IDLE3="${IDLE3:-120}"
 OUT_LOG="${OUT_LOG:-/dev/null}"
 
+print_phase_banner() {
+  # Pause HPA printer so the banner isn't interleaved
+  [[ -n "${HPA_PRINT_PID:-}" ]] && kill -STOP "$HPA_PRINT_PID" 2>/dev/null || true
+  echo ""
+  echo "$(date -u +%FT%T%z) === Phase: $1 ==="
+  [[ -n "${HPA_PRINT_PID:-}" ]] && kill -CONT "$HPA_PRINT_PID" 2>/dev/null || true
+}
+
 # Sleep for a given duration and log the phase label
 run_idle_phase() {
   local label="$1" duration="$2"
-  echo "$(date -u +%FT%T%z) === Phase: $label | dur=${duration}s ===" | tee -a "$OUT_LOG"
+  print_phase_banner "$label | dur=${duration}s"
   sleep "$duration"
 }
 
 # Send UDP traffic via iperf3 and log the phase label
 run_traffic_phase() {
   local label="$1" bitrate="$2" duration="$3"
-  echo "$(date -u +%FT%T%z) === Phase: $label | bitrate=$bitrate | dur=${duration}s ===" | tee -a "$OUT_LOG"
+  print_phase_banner "$label | bitrate=$bitrate | dur=${duration}s"
   BITRATE="$bitrate" DURATION="$duration" scripts/traffic/run_iperf_udp.sh >> "$OUT_LOG" 2>&1
 }
 
