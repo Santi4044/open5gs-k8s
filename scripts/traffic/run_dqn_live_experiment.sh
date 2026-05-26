@@ -10,10 +10,6 @@ echo "$(date -u +%FT%T%z)"
 echo "Output dir: $OUT_DIR"
 echo "================================="
 
-NS="open5gs"
-UE_POD=$(kubectl get pod -n "$NS" -l name=ue1 \
-         -o jsonpath='{.items[0].metadata.name}')
-
 # Ensure iperf3 server is running
 pkill iperf3 2>/dev/null; sleep 1
 iperf3 -s -D -p 5201
@@ -34,25 +30,7 @@ echo "Controller PID: $CTRL_PID"
 echo "Waiting for controller to initialise..."
 sleep 10
 
-# Traffic phases
-run_phase() {
-  local label="$1" bitrate="$2" dur="$3"
-  echo ""
-  echo "$(date -u +%FT%T%z) === Phase: $label | bitrate=$bitrate | dur=${dur}s ==="
-  if [ "$bitrate" = "0" ]; then
-    sleep "$dur"
-  else
-    kubectl exec -n "$NS" "$UE_POD" -c ue -- \
-      iperf3 -c 10.10.6.100 -p 5201 -u -b "$bitrate" -l 1200 -t "$dur" 2>&1 | tail -3
-    sleep 15
-  fi
-}
-
-run_phase "1-IDLE"   0    30
-run_phase "2-LOW"    10M  60
-run_phase "3-IDLE"   0    30
-run_phase "4-HIGH"   40M  120
-run_phase "5-IDLE"   0    120
+OUT_LOG="$OUT_DIR/traffic.log" scripts/traffic/run_traffic_phases.sh
 
 # Let controller observe cooldown
 echo ""

@@ -89,6 +89,7 @@ open5gs-k8s/
 │   │   ├── run_dqn_training.sh            # Offline DQN training
 │   │   ├── run_collect_training_data.sh   # Collect DQN training data
 │   │   ├── run_iperf_udp.sh               # Single iperf3 UDP burst
+│   │   ├── run_traffic_phases.sh          # Shared 5-phase traffic pattern
 │   │   ├── run_pattern{1,2,3}.sh          # Traffic patterns for training
 │   │   └── watch_scaling_prom.sh          # Prometheus metric watcher (CSV)
 │   └── plots/                         # Plot generation scripts
