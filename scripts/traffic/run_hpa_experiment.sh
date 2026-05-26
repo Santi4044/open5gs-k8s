@@ -3,17 +3,16 @@ set -euo pipefail
 
 # Experiment parameters
 OUT_DIR="${OUT_DIR:-results/$(date +%Y%m%d-%H%M%S)-hpa-experiment}"
-IDLE1="${IDLE1:-30}"
-LOW_RATE="${LOW_RATE:-10M}"
-LOW_DUR="${LOW_DUR:-60}"
-IDLE2="${IDLE2:-30}"
-PEAK_RATE="${PEAK_RATE:-40M}"
-PEAK_DUR="${PEAK_DUR:-120}"
-IDLE3="${IDLE3:-120}"
+NAMESPACE_OPEN5GS="${NAMESPACE_OPEN5GS:-open5gs}"
+HPA_NAME="${HPA_NAME:-open5gs-upf1-pps}"
 
 mkdir -p "$OUT_DIR"
 
+echo "================================="
+echo "HPA Live Scaling Experiment"
+echo "$(date -u +%FT%T%z)"
 echo "Output dir: $OUT_DIR"
+echo "================================="
 
 # Start the watcher
 OUT_CSV="$OUT_DIR/watch.csv"
@@ -21,27 +20,40 @@ OUT_LOG="$OUT_DIR/traffic.log"
 
 OUT_CSV="$OUT_CSV" scripts/traffic/watch_scaling_prom.sh >/dev/null 2>&1 &
 WATCH_PID=$!
-trap 'kill $WATCH_PID 2>/dev/null || true' EXIT
 
-# Phase 1: idle period
-echo "Idle ${IDLE1}s"
-sleep "$IDLE1"
+hpa_live_print() {
+  local prev_replicas=""
+  while true; do
+    local ts hpa_line replicas targets pps action
+    ts="$(date +%T)"
+    hpa_line="$(kubectl get hpa -n "$NAMESPACE_OPEN5GS" "$HPA_NAME" --no-headers 2>/dev/null || true)"
+    replicas="$(awk '{print $6}' <<<"$hpa_line" 2>/dev/null || true)"
+    targets="$(awk '{print $3}' <<<"$hpa_line" 2>/dev/null || true)"
+    pps="${targets%/*}"
+    replicas="${replicas:-NA}"
+    pps="${pps:-NA}"
 
-# Phase 2: low traffic period
-echo "Low traffic ${LOW_RATE} for ${LOW_DUR}s"
-BITRATE="$LOW_RATE" DURATION="$LOW_DUR" scripts/traffic/run_iperf_udp.sh | tee -a "$OUT_LOG"
+    action="Hold →"
+    if [[ "$replicas" =~ ^[0-9]+$ && "$prev_replicas" =~ ^[0-9]+$ ]]; then
+      if (( replicas > prev_replicas )); then
+        action="Scale Up ↑"
+      elif (( replicas < prev_replicas )); then
+        action="Scale Down ↓"
+      fi
+    fi
 
-# Phase 3: idle period
-echo "Idle ${IDLE2}s"
-sleep "$IDLE2"
+    echo "[HPA] ${ts} | PPS: ${pps} | Replicas: ${replicas} | Action: ${action}"
+    prev_replicas="$replicas"
+    sleep 5
+  done
+}
 
-# Phase 4: high traffic period
-echo "Peak traffic ${PEAK_RATE} for ${PEAK_DUR}s"
-BITRATE="$PEAK_RATE" DURATION="$PEAK_DUR" scripts/traffic/run_iperf_udp.sh | tee -a "$OUT_LOG"
+hpa_live_print &
+HPA_PRINT_PID=$!
 
-# Phase 5: final idle period
-echo "Idle ${IDLE3}s"
-sleep "$IDLE3"
+trap 'kill $WATCH_PID $HPA_PRINT_PID 2>/dev/null || true' EXIT
+
+OUT_LOG="$OUT_LOG" scripts/traffic/run_traffic_phases.sh
 
 echo "Done. Results saved to:"
 echo "  - $OUT_CSV"
