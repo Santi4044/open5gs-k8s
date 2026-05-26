@@ -30,6 +30,7 @@ echo "Controller PID: $CTRL_PID"
 echo "Waiting for controller to initialise..."
 sleep 10
 
+# Run traffic
 OUT_LOG="$OUT_DIR/traffic.log" scripts/traffic/run_traffic_phases.sh
 
 # Let controller observe cooldown
