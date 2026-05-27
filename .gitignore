@@ -22,4 +22,5 @@ msd/open5gs/
 msd/ueransim-gnb/
 msd/ueransim-ue/
 data/slices.yaml
-data/subscribers.yamlresults/
+data/subscribers.yaml
+results/
