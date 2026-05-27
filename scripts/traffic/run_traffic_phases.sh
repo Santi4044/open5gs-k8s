@@ -14,6 +14,7 @@ OUT_LOG="${OUT_LOG:-/dev/null}"
 print_phase_banner() {
   # Pause HPA printer so the banner isn't interleaved
   [[ -n "${HPA_PRINT_PID:-}" ]] && kill -STOP "$HPA_PRINT_PID" 2>/dev/null || true
+  sleep 0.3
   echo ""
   echo "$(date -u +%FT%T%z) === Phase: $1 ==="
   [[ -n "${HPA_PRINT_PID:-}" ]] && kill -CONT "$HPA_PRINT_PID" 2>/dev/null || true
