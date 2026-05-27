@@ -81,12 +81,15 @@ hpa_live_print &
 HPA_PRINT_PID=$!
 export HPA_PRINT_PID
 
-trap 'kill $WATCH_PID $HPA_PRINT_PID 2>/dev/null || true' EXIT
-
 # Run traffic
 OUT_LOG="$OUT_LOG" scripts/traffic/run_traffic_phases.sh
 
-kill $HPA_PRINT_PID 2>/dev/null || true
+# Wait for HPA to stabilise
+echo ""
+echo "All traffic phases done. Waiting 30s for HPA to stabilise..."
+sleep 30
+
+kill $WATCH_PID $HPA_PRINT_PID $PROM_PF_PID 2>/dev/null || true
 echo ""
 echo "================================="
 echo "Experiment complete: $(date -u +%FT%T%z)"
