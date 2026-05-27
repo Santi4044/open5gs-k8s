@@ -22,7 +22,7 @@ run_idle_phase() {
 run_traffic_phase() {
   local label="$1" bitrate="$2" duration="$3"
   echo "$(date -u +%FT%T%z) === Phase: $label | bitrate=$bitrate | dur=${duration}s ===" | tee -a "$OUT_LOG"
-  BITRATE="$bitrate" DURATION="$duration" scripts/traffic/run_iperf_udp.sh 2>&1 | tee -a "$OUT_LOG"
+  BITRATE="$bitrate" DURATION="$duration" scripts/traffic/run_iperf_udp.sh >> "$OUT_LOG" 2>&1
 }
 
 # Run 5-phase traffic pattern
