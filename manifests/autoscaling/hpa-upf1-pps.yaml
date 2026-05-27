@@ -25,11 +25,11 @@ spec:
       policies:
         - type: Pods
           value: 1
-          periodSeconds: 15
+          periodSeconds: 30
     scaleDown:
-      stabilizationWindowSeconds: 60
+      stabilizationWindowSeconds: 0
       selectPolicy: Max
       policies:
         - type: Pods
           value: 1
-          periodSeconds: 15
+          periodSeconds: 30
