@@ -51,6 +51,7 @@ The experiments assume a working environment with:
 - **Custom metrics adapter** configured so the `upf1_n3_in_pps` metric is accessible to Kubernetes HPA
 - **Python 3.x** installed locally with dependencies from `requirements.txt`
 - **kubectl** configured and pointing to your cluster
+- **curl** available locally (used by the HPA experiment script to query Prometheus via a local port-forward)
 
 To install Python dependencies for ARIMA/DQN:
 
@@ -165,7 +166,9 @@ bash scripts/traffic/run_hpa_experiment.sh
 
 This script:
 - Starts a Prometheus metric watcher in the background (saves `watch.csv`)
+- Opens a local port-forward to Prometheus for live PPS display (killed on exit)
 - Runs the traffic phases via `iperf3` through the UE pod
+- Waits 30s for HPA to stabilise after traffic ends
 - Saves results to `results/<timestamp>-hpa-experiment/`
 
 **Optional — override parameters via environment variables:**
@@ -173,6 +176,14 @@ This script:
 ```bash
 LOW_RATE=20M PEAK_RATE=60M PEAK_DUR=180 bash scripts/traffic/run_hpa_experiment.sh
 ```
+
+To override the Prometheus port-forward defaults used for the live PPS display:
+
+```bash
+PROM_LOCAL_PORT=19090 PROM_NAMESPACE=monitoring PROM_SVC=kps-kube-prometheus-stack-prometheus bash scripts/traffic/run_hpa_experiment.sh
+```
+
+> The script opens a local port-forward to Prometheus to display live PPS during the experiment and keeps it running until exit. After all traffic phases complete, it waits 30 seconds for the HPA to stabilise before shutting down the background processes.
 
 ---
 
