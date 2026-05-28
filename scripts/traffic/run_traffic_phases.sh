@@ -34,7 +34,7 @@ run_traffic_phase() {
   BITRATE="$bitrate" DURATION="$duration" scripts/traffic/run_iperf_udp.sh >> "$OUT_LOG" 2>&1
 }
 
-# Run 5-phase traffic pattern
+# Run five-phase traffic pattern
 run_idle_phase "1-IDLE" "$IDLE1"
 run_traffic_phase "2-LOW" "$LOW_RATE" "$LOW_DUR"
 run_idle_phase "3-IDLE" "$IDLE2"
