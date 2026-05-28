@@ -44,8 +44,8 @@
               "mode": "absolute",
               "steps": [
                 { "color": "green", "value": null },
-                { "color": "yellow", "value": 3000 },
-                { "color": "red", "value": 4000 }
+                { "color": "yellow", "value": 750 },
+                { "color": "red", "value": 1500 }
               ]
             },
             "unit": "pps"
@@ -76,8 +76,8 @@
               "mode": "absolute",
               "steps": [
                 { "color": "green", "value": null },
-                { "color": "yellow", "value": 3000 },
-                { "color": "red", "value": 4000 }
+                { "color": "yellow", "value": 750 },
+                { "color": "red", "value": 1500 }
               ]
             },
             "unit": "pps"
@@ -98,7 +98,7 @@
         "datasource": { "type": "prometheus", "uid": "prometheus" },
         "targets": [
           {
-            "expr": "vector(4000)",
+            "expr": "vector(1500)",
             "legendFormat": "Threshold",
             "refId": "A"
           }
@@ -239,7 +239,7 @@
       {
         "id": 7,
         "title": "PPS vs HPA Threshold (Scaling Trigger View)",
-        "description": "Shows when PPS crosses the 4000 threshold that triggers scaling",
+        "description": "Shows when PPS crosses the 1500 threshold that triggers scaling",
         "type": "timeseries",
         "gridPos": { "h": 7, "w": 12, "x": 12, "y": 8 },
         "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -250,12 +250,12 @@
             "refId": "A"
           },
           {
-            "expr": "vector(4000)",
-            "legendFormat": "HPA Threshold (4000)",
+            "expr": "vector(1500)",
+            "legendFormat": "HPA Threshold (1500)",
             "refId": "B"
           },
           {
-            "expr": "vector(8000)",
+            "expr": "vector(3000)",
             "legendFormat": "2-Replica Threshold",
             "refId": "C"
           }
@@ -279,7 +279,7 @@
               ]
             },
             {
-              "matcher": { "id": "byName", "options": "HPA Threshold (4000)" },
+              "matcher": { "id": "byName", "options": "HPA Threshold (1500)" },
               "properties": [
                 { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
                 { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }

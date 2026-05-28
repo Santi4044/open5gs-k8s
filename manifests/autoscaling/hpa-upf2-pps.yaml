@@ -32,4 +32,4 @@ spec:
           name: upf_n3_in_pps
         target:
           type: Value
-          value: "4000"
+          value: "1500"

@@ -119,7 +119,7 @@ def scale_deployment(desired):
         return False
 
 
-def pps_to_replicas(pps, threshold=4000, max_replicas=5):
+def pps_to_replicas(pps, threshold=1500, max_replicas=5):
     """Convert PPS to desired replica count."""
     if pps <= 0:
         return 1

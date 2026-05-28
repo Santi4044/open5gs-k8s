@@ -68,7 +68,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 # DQN Model & Agent
 class UPFScalingEnv:
     """Simulated UPF scaling environment for offline training."""
-    def __init__(self, pps_series, threshold=4000, min_replicas=1, max_replicas=5):
+    def __init__(self, pps_series, threshold=1500, min_replicas=1, max_replicas=5):
         self.pps = pps_series
         self.threshold = threshold
         self.min_replicas = min_replicas
