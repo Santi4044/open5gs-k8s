@@ -12,7 +12,7 @@ IDLE3="${IDLE3:-120}"
 OUT_LOG="${OUT_LOG:-/dev/null}"
 
 print_phase_banner() {
-  # Pause HPA printer so the banner isn't interleaved
+  # Pause HPA printer for a second to let the phase label printed
   [[ -n "${HPA_PRINT_PID:-}" ]] && kill -STOP "$HPA_PRINT_PID" 2>/dev/null || true
   sleep 0.3
   echo ""
