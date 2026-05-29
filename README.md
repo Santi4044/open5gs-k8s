@@ -1,6 +1,6 @@
-# 5G Core Network Autoscaling — Algorithm Performance Comparison
+# 5G Core Network Autoscaling - Algorithm Performance Comparison
 
-> **Goal:** Compare three autoscaling strategies — **HPA**, **ARIMA**, and **DQN** — for the User Plane Function (UPF) of a 5G Core Network deployed on Kubernetes using [Open5GS](https://open5gs.org/) and [UERANSIM](https://github.com/aligungr/UERANSIM).
+> **Goal:** Compare three autoscaling approaches - **HPA**, **ARIMA**, and **DQN** - for the User Plane Function (UPF) of a 5G Core Network deployed on Kubernetes using [Open5GS and UERANSIM](https://github.com/niloysh/open5gs-k8s).
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## 1. Project Overview
 
-This project evaluates and compares three autoscaling approaches applied to the **UPF (User Plane Function)** of a 5G Core Network:
+This project evaluates and compares three autoscaling approaches applied to the UPF (User Plane Function) of a 5G Core Network:
 
 | Algorithm | Type | Description |
 |-----------|------|-------------|
@@ -32,17 +32,17 @@ This project evaluates and compares three autoscaling approaches applied to the 
 | **ARIMA** | Predictive | Time-series forecasting; predicts future PPS to scale proactively |
 | **DQN** | Reinforcement Learning | Learns an optimal scaling policy from historical traffic patterns |
 
-Each algorithm drives pod scaling for the `open5gs-upf1` deployment in the `open5gs` Kubernetes namespace. Traffic is generated via `iperf3` through UERANSIM UE pods, and metrics are scraped from **Prometheus**. All experiments follow the same traffic pattern:
+Each algorithm drives pod scaling for the `open5gs-upf1` deployment in the `open5gs` Kubernetes namespace. Traffic is generated via `iperf3` through UERANSIM UE pods, and metrics are scraped from Prometheus. All experiments follow the same traffic pattern:
 
 ```
-IDLE (30s) → LOW traffic 10 Mbps (60s) → IDLE (30s) → HIGH traffic 40 Mbps (120s) → IDLE (120s)
+IDLE (30s) > LOW traffic 10 Mbps (60s) > IDLE (30s) > HIGH traffic 40 Mbps (120s) > IDLE (120s)
 ```
 
 ---
 
 ## 2. Environment & Prerequisites
 
-> This section is intentionally brief — the focus of this repo is the autoscaling comparison, not the 5G setup itself.
+> This section is intentionally brief - the focus of this repo is the autoscaling comparison, not the 5G setup itself.
 
 The experiments assume a working environment with:
 
@@ -51,57 +51,7 @@ The experiments assume a working environment with:
 - **Custom metrics adapter** configured so the `upf1_n3_in_pps` metric is accessible to Kubernetes HPA
 - **Python 3.x** installed locally with dependencies from `requirements.txt`
 - **kubectl** configured and pointing to your cluster
-
-### Monitoring & Observability
-
-Prometheus is used as the **metrics backend** for the autoscaling experiments. It scrapes UPF metrics exposed by the `open5gs-upf1-metrics` service and provides the packet-rate signal used by the autoscaling logic.
-
-Grafana is optional, but useful for **visualising traffic and scaling behaviour in real time** during experiments.
-
-#### Access Prometheus
-
-```bash
-kubectl port-forward -n monitoring svc/kps-kube-prometheus-stack-prometheus 9090:9090
-```
-
-Open:
-
-```text
-http://localhost:9090
-```
-
-#### Access Grafana
-
-```bash
-kubectl port-forward -n monitoring svc/kps-grafana 3000:80
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-Default login credentials, if unchanged:
-
-- **Username:** `admin`
-- **Password:** `admin123`
-
-#### Relevant UPF Metric
-
-Raw metric:
-
-```text
-fivegs_ep_n3_gtp_indatapktn3upf
-```
-
-Example PromQL query for incoming N3 packet rate on UPF1:
-
-```promql
-sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace="open5gs",service="open5gs-upf1-metrics"}[30s]))
-```
-
-This query is useful for verifying that traffic generation is working and for observing how each autoscaling strategy reacts to changing load.
+- **curl** available locally (used by the HPA experiment script to query Prometheus via a local port-forward)
 
 To install Python dependencies for ARIMA/DQN:
 
@@ -117,11 +67,11 @@ pip install -r manifests/autoscaling/arima/requirements.txt
 
 ```
 open5gs-k8s/
-│
+|
 ├── manifests/
-│   ├── autoscaling/
-│   │   ├── hpa-upf1-pps.yaml          # HPA manifest for UPF1
-│   │   ├── hpa-upf2-pps.yaml          # HPA manifest for UPF2
+|   ├── autoscaling/
+|   │   ├── hpa-upf1-pps.yaml          # HPA manifest for UPF1
+|   │   ├── hpa-upf2-pps.yaml          # HPA manifest for UPF2
 │   │   ├── arima/
 │   │   │   ├── arima_live_controller.py   # ARIMA control loop
 │   │   │   └── requirements.txt           # Python deps for ARIMA
@@ -163,14 +113,14 @@ open5gs-k8s/
 
 ## 4. Algorithms Overview
 
-### 4.1 HPA — Horizontal Pod Autoscaler
+### 4.1 HPA - Horizontal Pod Autoscaler
 
-Kubernetes' built-in autoscaler. It watches the **`upf1_n3_in_pps`** custom metric (packets per second ingested by UPF1's N3 interface, served via a custom metrics adapter from Prometheus) and scales the deployment reactively when the metric crosses the configured threshold.
+**Kubernetes' built-in autoscaler.** It watches the **`upf1_n3_in_pps`** custom metric (packets per second ingested by UPF1's N3 interface, served via a custom metrics adapter from Prometheus) and scales the deployment reactively when the metric crosses the configured threshold.
 
 - **Pros:** Zero extra components, native K8s, no training required
-- **Cons:** Purely reactive — always one step behind traffic spikes
+- **Cons:** **Purely reactive** - always one step behind traffic spikes
 
-### 4.2 ARIMA — AutoRegressive Integrated Moving Average
+### 4.2 ARIMA - AutoRegressive Integrated Moving Average
 
 A Python control loop (`arima_live_controller.py`) that:
 1. Queries Prometheus every `--interval` seconds for the current PPS
@@ -180,13 +130,13 @@ A Python control loop (`arima_live_controller.py`) that:
 5. Calls `kubectl scale` if a change is needed (respecting a cooldown)
 6. Disables HPA while running, and re-enables it on exit
 
-- **Pros:** Proactive — acts before the spike hits
+- **Pros:** Proactive - acts before the spike hits
 - **Cons:** Sensitive to non-stationary or abrupt traffic changes; ARIMA order needs tuning
 
-### 4.3 DQN — Deep Q-Network
+### 4.3 DQN - Deep Q-Network
 
 A reinforcement learning controller (`dqn_live_controller.py`) that:
-1. Learns a scaling **policy** from historical traffic data (offline training)
+1. Learns a **scaling policy** from historical traffic data (offline training)
 2. At runtime, observes the current PPS + replica state and selects an action (scale up / hold / scale down)
 3. Uses a neural network (Q-network) to estimate action values
 4. Ships with a **pre-trained model** (`dqn_model.pth`) so you can skip training
@@ -198,9 +148,9 @@ A reinforcement learning controller (`dqn_live_controller.py`) that:
 
 ## 5. Running the Experiments
 
-All experiment scripts are run from the **repo root**. Each one follows the same traffic phases and saves timestamped output to `results/`.
+All experiment scripts are run from the repo root. Each one follows the same traffic phases and saves timestamped output to `results/`.
 
-### 5.1 HPA — Horizontal Pod Autoscaler
+### 5.1 HPA - Horizontal Pod Autoscaler
 
 **Step 1:** Apply the HPA manifest.
 
@@ -216,14 +166,24 @@ bash scripts/traffic/run_hpa_experiment.sh
 
 This script:
 - Starts a Prometheus metric watcher in the background (saves `watch.csv`)
+- Opens a local port-forward to Prometheus for live PPS display (killed on exit)
 - Runs the traffic phases via `iperf3` through the UE pod
+- Waits 30s for HPA to stabilise after traffic ends
 - Saves results to `results/<timestamp>-hpa-experiment/`
 
-**Optional — override parameters via environment variables:**
+**Optional - override parameters via environment variables:**
 
 ```bash
 LOW_RATE=20M PEAK_RATE=60M PEAK_DUR=180 bash scripts/traffic/run_hpa_experiment.sh
 ```
+
+To override the Prometheus port-forward defaults used for the live PPS display:
+
+```bash
+PROM_LOCAL_PORT=19090 PROM_NAMESPACE=monitoring PROM_SVC=kps-kube-prometheus-stack-prometheus bash scripts/traffic/run_hpa_experiment.sh
+```
+
+> The script opens a local port-forward to Prometheus to display live PPS during the experiment and keeps it running until exit. After all traffic phases complete, it waits 30 seconds for the HPA to stabilise before shutting down the background processes.
 
 ---
 
@@ -263,9 +223,9 @@ python manifests/autoscaling/arima/arima_live_controller.py \
 
 ---
 
-### 5.3 DQN — Deep Q-Network
+### 5.3 DQN - Deep Q-Network
 
-The DQN workflow has three stages: **collect training data → train → run live experiment**. A pre-trained model (`dqn_model.pth`) is included so you can skip straight to Step 3 if desired.
+The DQN workflow has three stages: **collect training data -> train -> run live experiment**. A pre-trained model (`dqn_model.pth`) is included so you can skip straight to Step 3 if desired.
 
 **Step 1 (optional): Collect training data**
 
@@ -292,7 +252,7 @@ bash scripts/traffic/run_dqn_live_experiment.sh
 This script:
 - Starts a local `iperf3` server
 - Loads the pre-trained model and starts `dqn_live_controller.py` in the background
-- Runs the same traffic phases (IDLE → LOW → IDLE → HIGH → IDLE)
+- Runs the same traffic phases (IDLE > LOW > IDLE > HIGH > IDLE)
 - Saves `dqn_live.csv` to `results/<timestamp>-dqn-experiment/`
 
 **Run the controller manually:**
