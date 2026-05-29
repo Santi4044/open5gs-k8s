@@ -52,6 +52,57 @@ The experiments assume a working environment with:
 - **Python 3.x** installed locally with dependencies from `requirements.txt`
 - **kubectl** configured and pointing to your cluster
 
+### Monitoring & Observability
+
+Prometheus is used as the **metrics backend** for the autoscaling experiments. It scrapes UPF metrics exposed by the `open5gs-upf1-metrics` service and provides the packet-rate signal used by the autoscaling logic.
+
+Grafana is optional, but useful for **visualising traffic and scaling behaviour in real time** during experiments.
+
+#### Access Prometheus
+
+```bash
+kubectl port-forward -n monitoring svc/kps-kube-prometheus-stack-prometheus 9090:9090
+```
+
+Open:
+
+```text
+http://localhost:9090
+```
+
+#### Access Grafana
+
+```bash
+kubectl port-forward -n monitoring svc/kps-grafana 3000:80
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Default login credentials, if unchanged:
+
+- **Username:** `admin`
+- **Password:** `admin123`
+
+#### Relevant UPF Metric
+
+Raw metric:
+
+```text
+fivegs_ep_n3_gtp_indatapktn3upf
+```
+
+Example PromQL query for incoming N3 packet rate on UPF1:
+
+```promql
+sum(rate(fivegs_ep_n3_gtp_indatapktn3upf{namespace="open5gs",service="open5gs-upf1-metrics"}[30s]))
+```
+
+This query is useful for verifying that traffic generation is working and for observing how each autoscaling strategy reacts to changing load.
+
 To install Python dependencies for ARIMA/DQN:
 
 ```bash
